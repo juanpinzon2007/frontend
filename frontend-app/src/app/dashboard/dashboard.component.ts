@@ -2,6 +2,7 @@ import { CurrencyPipe, DatePipe } from '@angular/common';
 import { Component, DestroyRef, computed, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { AbstractControl } from '@angular/forms';
+import { HttpErrorResponse } from '@angular/common/http';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { finalize } from 'rxjs';
 import {
@@ -22,6 +23,8 @@ import {
 type AuthMode = 'login' | 'register';
 type FormGroupName = 'product' | 'order' | 'login' | 'register';
 type ProductSort = 'featured' | 'price-desc' | 'price-asc' | 'stock-desc';
+
+const STRICT_EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 
 @Component({
   selector: 'app-dashboard',
@@ -152,13 +155,13 @@ export class DashboardComponent {
   });
 
   readonly loginForm = this.formBuilder.nonNullable.group({
-    email: ['', [Validators.required, Validators.email]],
+    email: ['', [Validators.required, Validators.email, Validators.pattern(STRICT_EMAIL_PATTERN)]],
     password: ['', [Validators.required, Validators.minLength(8)]]
   });
 
   readonly registerForm = this.formBuilder.nonNullable.group({
     fullName: ['', [Validators.required, Validators.minLength(3)]],
-    email: ['', [Validators.required, Validators.email]],
+    email: ['', [Validators.required, Validators.email, Validators.pattern(STRICT_EMAIL_PATTERN)]],
     password: [
       '',
       [Validators.required, Validators.minLength(8), Validators.pattern(/^(?=.*[A-Za-z])(?=.*\d).+$/)]
@@ -202,7 +205,7 @@ export class DashboardComponent {
           }
         },
         error: error => {
-          this.productError.set(error?.error?.message ?? 'No fue posible cargar el catalogo.');
+          this.productError.set(this.getErrorMessage(error, 'No fue posible cargar el catalogo.'));
         }
       });
   }
@@ -218,7 +221,7 @@ export class DashboardComponent {
       .subscribe({
         next: orders => this.orders.set(orders),
         error: error => {
-          this.orderError.set(error?.error?.message ?? 'No fue posible cargar los pedidos.');
+          this.orderError.set(this.getErrorMessage(error, 'No fue posible cargar los pedidos.'));
         }
       });
   }
@@ -247,7 +250,7 @@ export class DashboardComponent {
           this.loginForm.reset({ email: response.email, password: '' });
         },
         error: error => {
-          this.authError.set(error?.error?.message ?? 'No fue posible crear la cuenta.');
+          this.authError.set(this.getErrorMessage(error, 'No fue posible crear la cuenta.'));
         }
       });
   }
@@ -275,7 +278,7 @@ export class DashboardComponent {
           this.loginForm.reset({ email: response.email, password: '' });
         },
         error: error => {
-          this.authError.set(error?.error?.message ?? 'No fue posible iniciar sesion.');
+          this.authError.set(this.getErrorMessage(error, 'No fue posible iniciar sesion.'));
         }
       });
   }
@@ -323,7 +326,7 @@ export class DashboardComponent {
           }
         },
         error: error => {
-          this.productError.set(error?.error?.message ?? 'No fue posible registrar el producto.');
+          this.productError.set(this.getErrorMessage(error, 'No fue posible registrar el producto.'));
         }
       });
   }
@@ -362,7 +365,7 @@ export class DashboardComponent {
           this.loadProducts();
         },
         error: error => {
-          this.orderError.set(error?.error?.message ?? 'No fue posible crear el pedido.');
+          this.orderError.set(this.getErrorMessage(error, 'No fue posible crear el pedido.'));
         }
       });
   }
@@ -391,5 +394,24 @@ export class DashboardComponent {
     if (user) {
       this.orderForm.patchValue({ customerName: user.fullName });
     }
+  }
+
+  private getErrorMessage(error: unknown, fallbackMessage: string): string {
+    if (error instanceof HttpErrorResponse) {
+      if (error.status === 0) {
+        return 'No hubo conexion con el backend. Revisa el despliegue del gateway o la configuracion de /api.';
+      }
+
+      const apiError = error.error as { message?: string; details?: string[] } | null;
+      if (apiError?.details?.length) {
+        return apiError.details.join(' | ');
+      }
+
+      if (apiError?.message) {
+        return apiError.message;
+      }
+    }
+
+    return fallbackMessage;
   }
 }

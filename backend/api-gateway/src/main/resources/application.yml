@@ -33,3 +33,4 @@ management:
 app:
   cors:
     allowed-origins: ${ALLOWED_ORIGINS:http://localhost:4200,http://localhost:8080}
+    allowed-origin-patterns: ${ALLOWED_ORIGIN_PATTERNS:http://localhost:*,https://*.run.app,https://*.vercel.app,https://*.netlify.app,https://*.web.app,https://*.firebaseapp.com}
