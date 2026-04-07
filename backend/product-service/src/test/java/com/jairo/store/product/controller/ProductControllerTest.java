@@ -4,6 +4,7 @@ import com.jairo.store.product.config.GlobalExceptionHandler;
 import com.jairo.store.product.service.ProductService;
 import com.jairo.store.shared.dto.ProductRequest;
 import com.jairo.store.shared.dto.ProductResponse;
+import com.jairo.store.shared.dto.StockReservationRequest;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.reactive.WebFluxTest;
@@ -57,5 +58,28 @@ class ProductControllerTest {
                 .expectStatus().isCreated()
                 .expectBody()
                 .jsonPath("$.name").isEqualTo("Teclado");
+    }
+
+    @Test
+    void shouldReserveStock() {
+        UUID productId = UUID.randomUUID();
+        StockReservationRequest request = new StockReservationRequest(2);
+        ProductResponse response = new ProductResponse(
+                productId,
+                "Teclado",
+                "Teclado mecanico",
+                BigDecimal.valueOf(80),
+                18
+        );
+        when(productService.reserveStock(productId, request.quantity())).thenReturn(Mono.just(response));
+
+        webTestClient.post()
+                .uri("/api/products/{id}/reserve", productId)
+                .contentType(MediaType.APPLICATION_JSON)
+                .bodyValue(request)
+                .exchange()
+                .expectStatus().isOk()
+                .expectBody()
+                .jsonPath("$.availableStock").isEqualTo(18);
     }
 }

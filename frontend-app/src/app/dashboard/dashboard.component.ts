@@ -1,16 +1,10 @@
 import { CurrencyPipe, DatePipe } from '@angular/common';
+import { HttpErrorResponse } from '@angular/common/http';
 import { Component, DestroyRef, computed, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { AbstractControl } from '@angular/forms';
-import { HttpErrorResponse } from '@angular/common/http';
-import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import { AbstractControl, FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { finalize } from 'rxjs';
-import {
-  AuthApiService,
-  AuthResponse,
-  LoginPayload,
-  RegisterPayload
-} from '../core/auth-api.service';
+import { AuthApiService, AuthResponse, LoginPayload, RegisterPayload } from '../core/auth-api.service';
 import { AuthSessionService } from '../core/auth-session.service';
 import {
   CreateOrderPayload,
@@ -45,6 +39,8 @@ export class DashboardComponent {
   readonly catalogSort = signal<ProductSort>('featured');
   readonly products = signal<Product[]>([]);
   readonly orders = signal<Order[]>([]);
+  readonly editingProductId = signal<string | null>(null);
+  readonly deletingProductId = signal<string | null>(null);
   readonly isLoadingProducts = signal(false);
   readonly isLoadingOrders = signal(false);
   readonly isSubmittingProduct = signal(false);
@@ -59,6 +55,7 @@ export class DashboardComponent {
 
   readonly currentUser = this.authSession.currentUser;
   readonly isAuthenticated = computed(() => this.currentUser() !== null);
+  readonly isEditingProduct = computed(() => this.editingProductId() !== null);
   readonly totalInventory = computed(() => this.products().reduce((sum, item) => sum + item.availableStock, 0));
   readonly inventoryValue = computed(() =>
     this.products().reduce((sum, item) => sum + item.price * item.availableStock, 0)
@@ -71,21 +68,23 @@ export class DashboardComponent {
       return 0;
     }
 
-    const total = currentOrders.reduce((sum, order) => sum + order.totalPrice, 0);
-    return total / currentOrders.length;
+    return currentOrders.reduce((sum, order) => sum + order.totalPrice, 0) / currentOrders.length;
   });
   readonly selectedProduct = computed(() => {
     const selectedId = this.orderForm.controls.productId.value;
     return this.products().find(product => product.id === selectedId) ?? null;
   });
   readonly orderPreviewTotal = computed(() => {
-    const selected = this.selectedProduct();
-    const quantity = this.orderForm.controls.quantity.value;
-    return selected ? selected.price * quantity : 0;
+    const product = this.selectedProduct();
+    return product ? product.price * this.orderForm.controls.quantity.value : 0;
   });
   readonly premiumProduct = computed(() => {
     const currentProducts = this.products();
     return [...currentProducts].sort((left, right) => right.price - left.price)[0] ?? null;
+  });
+  readonly productBeingEdited = computed(() => {
+    const productId = this.editingProductId();
+    return this.products().find(product => product.id === productId) ?? null;
   });
   readonly filteredProducts = computed(() => {
     const query = this.catalogQuery().trim().toLowerCase();
@@ -125,20 +124,38 @@ export class DashboardComponent {
       .sort((left, right) => new Date(right.createdAt).getTime() - new Date(left.createdAt).getTime())
       .slice(0, 6)
   );
+  readonly serviceHealth = computed(() => [
+    {
+      label: 'Autenticacion',
+      state: this.authError() ? 'Atencion' : this.isAuthenticated() ? 'Operativo' : 'Disponible',
+      tone: this.authError() ? 'danger' : this.isAuthenticated() ? 'success' : 'neutral'
+    },
+    {
+      label: 'Catalogo',
+      state: this.productError() ? 'Atencion' : this.products().length ? 'Operativo' : 'Sin datos',
+      tone: this.productError() ? 'danger' : this.products().length ? 'success' : 'neutral'
+    },
+    {
+      label: 'Pedidos',
+      state: this.orderError() ? 'Atencion' : this.orders().length ? 'Operativo' : 'Disponible',
+      tone: this.orderError() ? 'danger' : this.orders().length ? 'success' : 'neutral'
+    }
+  ]);
+
   readonly experienceBadges = [
-    { value: '01', label: 'design system consistente para flujos de negocio' },
-    { value: '02', label: 'dashboard, formularios y catalogo con lectura clara' },
-    { value: '03', label: 'interfaz premium sin afectar servicios ni validaciones' }
+    { value: '01', label: 'autenticacion, catalogo y pedidos en un mismo flujo' },
+    { value: '02', label: 'CRUD real para el catalogo con refresco de datos' },
+    { value: '03', label: 'validaciones sincronizadas entre frontend y backend' }
   ];
   readonly trustPoints = [
-    'Botones, cards e inputs comparten alturas, radios, sombras y estados visuales reutilizables.',
-    'La navegacion lateral y la jerarquia de paneles reducen ruido visual y aceleran la lectura.',
-    'La UI conserva la funcionalidad existente porque el rediseño se limita a estructura y estilos.'
+    'Los formularios muestran errores reales del backend y validaciones antes de enviar.',
+    'El catalogo ya permite crear, editar, eliminar y refrescar referencias.',
+    'Los pedidos reservan stock para evitar operaciones incoherentes en la plataforma.'
   ];
   readonly architecturePoints = [
-    'Microservicios con persistencia independiente y gateway unico.',
-    'Angular standalone con estado local via signals y servicios especializados.',
-    'Autenticacion con persistencia propia, validacion y contraseñas cifradas.'
+    'Gateway unico para auth-service, product-service y order-service.',
+    'Angular standalone con signals para estado local y formularios reactivos.',
+    'Microservicios con validacion consistente y persistencia separada.'
   ];
 
   readonly productForm = this.formBuilder.nonNullable.group({
@@ -191,7 +208,9 @@ export class DashboardComponent {
   loadProducts(): void {
     this.productError.set('');
     this.isLoadingProducts.set(true);
-    this.api.getProducts()
+
+    this.api
+      .getProducts()
       .pipe(
         takeUntilDestroyed(this.destroyRef),
         finalize(() => this.isLoadingProducts.set(false))
@@ -199,10 +218,7 @@ export class DashboardComponent {
       .subscribe({
         next: products => {
           this.products.set(products);
-
-          if (!this.orderForm.controls.productId.value && products.length > 0) {
-            this.orderForm.patchValue({ productId: products[0].id });
-          }
+          this.ensureSelectedProduct(products);
         },
         error: error => {
           this.productError.set(this.getErrorMessage(error, 'No fue posible cargar el catalogo.'));
@@ -213,7 +229,9 @@ export class DashboardComponent {
   loadOrders(): void {
     this.orderError.set('');
     this.isLoadingOrders.set(true);
-    this.api.getOrders()
+
+    this.api
+      .getOrders()
       .pipe(
         takeUntilDestroyed(this.destroyRef),
         finalize(() => this.isLoadingOrders.set(false))
@@ -238,7 +256,8 @@ export class DashboardComponent {
 
     const payload = this.registerForm.getRawValue() as RegisterPayload;
 
-    this.authApi.register(payload)
+    this.authApi
+      .register(payload)
       .pipe(
         takeUntilDestroyed(this.destroyRef),
         finalize(() => this.isSubmittingAuth.set(false))
@@ -267,7 +286,8 @@ export class DashboardComponent {
 
     const payload = this.loginForm.getRawValue() as LoginPayload;
 
-    this.authApi.login(payload)
+    this.authApi
+      .login(payload)
       .pipe(
         takeUntilDestroyed(this.destroyRef),
         finalize(() => this.isSubmittingAuth.set(false))
@@ -298,6 +318,24 @@ export class DashboardComponent {
     this.catalogSort.set(sort);
   }
 
+  startProductEdition(product: Product): void {
+    this.editingProductId.set(product.id);
+    this.productError.set('');
+    this.productSuccess.set('');
+    this.productForm.reset({
+      name: product.name,
+      description: product.description,
+      price: product.price,
+      availableStock: product.availableStock
+    });
+  }
+
+  cancelProductEdition(): void {
+    this.editingProductId.set(null);
+    this.resetProductForm();
+    this.productError.set('');
+  }
+
   submitProduct(): void {
     if (this.productForm.invalid) {
       this.productForm.markAllAsTouched();
@@ -309,24 +347,64 @@ export class DashboardComponent {
     this.isSubmittingProduct.set(true);
 
     const payload = this.productForm.getRawValue() as CreateProductPayload;
+    const editingProductId = this.editingProductId();
+    const request$ = editingProductId
+      ? this.api.updateProduct(editingProductId, payload)
+      : this.api.createProduct(payload);
 
-    this.api.createProduct(payload)
+    request$
       .pipe(
         takeUntilDestroyed(this.destroyRef),
         finalize(() => this.isSubmittingProduct.set(false))
       )
       .subscribe({
         next: product => {
-          this.products.update(items => [product, ...items]);
-          this.productForm.reset({ name: '', description: '', price: 0, availableStock: 1 });
-          this.productSuccess.set('Producto agregado al catalogo.');
+          this.products.update(items => {
+            if (!editingProductId) {
+              return [product, ...items];
+            }
 
-          if (!this.orderForm.controls.productId.value) {
-            this.orderForm.patchValue({ productId: product.id });
-          }
+            return items.map(item => (item.id === product.id ? product : item));
+          });
+          this.ensureSelectedProduct(this.products());
+          this.productSuccess.set(
+            editingProductId ? 'Producto actualizado correctamente.' : 'Producto agregado al catalogo.'
+          );
+          this.cancelProductEdition();
         },
         error: error => {
-          this.productError.set(this.getErrorMessage(error, 'No fue posible registrar el producto.'));
+          this.productError.set(
+            this.getErrorMessage(
+              error,
+              editingProductId ? 'No fue posible actualizar el producto.' : 'No fue posible registrar el producto.'
+            )
+          );
+        }
+      });
+  }
+
+  deleteProduct(product: Product): void {
+    this.productError.set('');
+    this.productSuccess.set('');
+    this.deletingProductId.set(product.id);
+
+    this.api
+      .deleteProduct(product.id)
+      .pipe(
+        takeUntilDestroyed(this.destroyRef),
+        finalize(() => this.deletingProductId.set(null))
+      )
+      .subscribe({
+        next: () => {
+          this.products.update(items => items.filter(item => item.id !== product.id));
+          if (this.editingProductId() === product.id) {
+            this.cancelProductEdition();
+          }
+          this.ensureSelectedProduct(this.products());
+          this.productSuccess.set('Producto eliminado del catalogo.');
+        },
+        error: error => {
+          this.productError.set(this.getErrorMessage(error, 'No fue posible eliminar el producto.'));
         }
       });
   }
@@ -343,13 +421,25 @@ export class DashboardComponent {
       return;
     }
 
+    const selectedProduct = this.selectedProduct();
+    if (!selectedProduct) {
+      this.orderError.set('Selecciona un producto valido antes de continuar.');
+      return;
+    }
+
+    if (this.orderForm.controls.quantity.value > selectedProduct.availableStock) {
+      this.orderError.set('La cantidad solicitada supera el stock disponible.');
+      return;
+    }
+
     this.orderError.set('');
     this.orderSuccess.set('');
     this.isSubmittingOrder.set(true);
 
     const payload = this.orderForm.getRawValue() as CreateOrderPayload;
 
-    this.api.createOrder(payload)
+    this.api
+      .createOrder(payload)
       .pipe(
         takeUntilDestroyed(this.destroyRef),
         finalize(() => this.isSubmittingOrder.set(false))
@@ -361,7 +451,7 @@ export class DashboardComponent {
             quantity: 1,
             customerName: this.currentUser()?.fullName ?? ''
           });
-          this.orderSuccess.set('Pedido creado y registrado en el backend.');
+          this.orderSuccess.set('Pedido creado y stock actualizado.');
           this.loadProducts();
         },
         error: error => {
@@ -396,19 +486,43 @@ export class DashboardComponent {
     }
   }
 
+  private ensureSelectedProduct(products: Product[]): void {
+    const currentSelection = this.orderForm.controls.productId.value;
+    const selectedExists = products.some(product => product.id === currentSelection);
+
+    if (!selectedExists) {
+      this.orderForm.patchValue({ productId: products[0]?.id ?? '' });
+    }
+  }
+
+  private resetProductForm(): void {
+    this.productForm.reset({
+      name: '',
+      description: '',
+      price: 0,
+      availableStock: 1
+    });
+  }
+
   private getErrorMessage(error: unknown, fallbackMessage: string): string {
     if (error instanceof HttpErrorResponse) {
       if (error.status === 0) {
-        return 'No hubo conexion con el backend. Revisa el despliegue del gateway o la configuracion de /api.';
+        return 'No hubo conexion con el backend. Revisa el gateway y la configuracion de /api.';
       }
 
-      const apiError = error.error as { message?: string; details?: string[] } | null;
-      if (apiError?.details?.length) {
-        return apiError.details.join(' | ');
+      const apiError = error.error as { message?: string; details?: string[] } | string | null;
+      if (typeof apiError === 'string' && apiError.trim()) {
+        return apiError;
       }
 
-      if (apiError?.message) {
-        return apiError.message;
+      if (apiError && typeof apiError === 'object') {
+        if (Array.isArray(apiError.details) && apiError.details.length) {
+          return apiError.details.join(' | ');
+        }
+
+        if (apiError.message) {
+          return apiError.message;
+        }
       }
     }
 

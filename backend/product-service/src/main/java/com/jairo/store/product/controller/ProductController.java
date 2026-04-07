@@ -3,6 +3,7 @@ package com.jairo.store.product.controller;
 import com.jairo.store.product.service.ProductService;
 import com.jairo.store.shared.dto.ProductRequest;
 import com.jairo.store.shared.dto.ProductResponse;
+import com.jairo.store.shared.dto.StockReservationRequest;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.validation.annotation.Validated;
@@ -56,5 +57,10 @@ public class ProductController {
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public Mono<Void> deleteProduct(@PathVariable UUID id) {
         return productService.delete(id);
+    }
+
+    @PostMapping("/{id}/reserve")
+    public Mono<ProductResponse> reserveStock(@PathVariable UUID id, @Valid @RequestBody StockReservationRequest request) {
+        return productService.reserveStock(id, request.quantity());
     }
 }

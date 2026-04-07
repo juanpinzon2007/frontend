@@ -36,7 +36,7 @@ public class OrderService {
                 ? "Cliente general"
                 : request.customerName().trim();
 
-        return productClient.getProduct(request.productId())
+        return productClient.reserveStock(request.productId(), request.quantity())
                 .map(product -> {
                     BigDecimal total = product.price().multiply(BigDecimal.valueOf(request.quantity()));
                     return new Order(

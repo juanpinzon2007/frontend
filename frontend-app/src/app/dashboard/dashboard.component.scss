@@ -146,6 +146,7 @@
 
 .session-card,
 .sidebar-metrics,
+.service-list,
 .executive-metrics,
 .badge-row,
 .kpi-grid,
@@ -190,6 +191,7 @@
 }
 
 .sidebar-metric,
+.service-item,
 .metric-badge,
 .executive-metrics div,
 .executive-highlight div,
@@ -211,6 +213,7 @@
 }
 
 .sidebar-metric span,
+.service-item small,
 .executive-highlight span,
 .selection-card span,
 .mini-list article span,
@@ -229,9 +232,45 @@
 }
 
 .sidebar-metric strong,
+.service-item strong,
 .executive-metrics dd,
 .kpi-card strong {
   font-size: 1.55rem;
+}
+
+.service-list {
+  gap: 12px;
+}
+
+.service-item {
+  padding: 14px;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 12px;
+  align-items: center;
+}
+
+.service-item strong {
+  display: block;
+  font-size: 0.96rem;
+}
+
+.service-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 999px;
+  background: var(--color-text-soft);
+  box-shadow: 0 0 0 6px rgba(100, 116, 139, 0.12);
+}
+
+.service-dot--success {
+  background: var(--color-success);
+  box-shadow: 0 0 0 6px rgba(31, 143, 95, 0.12);
+}
+
+.service-dot--danger {
+  background: var(--color-danger);
+  box-shadow: 0 0 0 6px rgba(204, 75, 75, 0.12);
 }
 
 .workspace-main {
@@ -341,6 +380,12 @@ textarea:focus {
   background: rgba(255, 255, 255, 0.8);
   border-color: var(--color-border-strong);
   color: var(--color-text);
+}
+
+.button--danger {
+  background: var(--color-danger-soft);
+  border-color: rgba(204, 75, 75, 0.2);
+  color: var(--color-danger);
 }
 
 .hero-grid {
@@ -542,6 +587,13 @@ textarea:focus {
   padding: 20px;
 }
 
+.card-actions {
+  margin-top: 18px;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
 .operation-card {
   background: linear-gradient(180deg, rgba(255, 255, 255, 0.94), rgba(247, 250, 252, 0.92));
 }
@@ -652,6 +704,11 @@ textarea:hover {
 
 .selection-card {
   gap: 6px;
+}
+
+.selection-card--info {
+  margin-bottom: 16px;
+  background: var(--color-info-soft);
 }
 
 .selection-card strong {
@@ -773,7 +830,8 @@ textarea:hover {
   .executive-metrics,
   .toolbar-grid,
   .form-grid,
-  .sidebar-metrics {
+  .sidebar-metrics,
+  .card-actions {
     grid-template-columns: 1fr;
   }
 

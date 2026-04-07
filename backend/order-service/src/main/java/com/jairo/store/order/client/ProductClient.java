@@ -1,8 +1,10 @@
 package com.jairo.store.order.client;
 
 import com.jairo.store.shared.dto.ProductResponse;
+import com.jairo.store.shared.dto.StockReservationRequest;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatusCode;
+import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
 import org.springframework.web.reactive.function.client.WebClient;
 import org.springframework.web.server.ResponseStatusException;
@@ -28,6 +30,21 @@ public class ProductClient {
                 .retrieve()
                 .onStatus(HttpStatusCode::is4xxClientError,
                         response -> Mono.error(new ResponseStatusException(NOT_FOUND, "Product not found")))
+                .bodyToMono(ProductResponse.class);
+    }
+
+    public Mono<ProductResponse> reserveStock(UUID productId, int quantity) {
+        return webClient.post()
+                .uri("/api/products/{id}/reserve", productId)
+                .contentType(MediaType.APPLICATION_JSON)
+                .bodyValue(new StockReservationRequest(quantity))
+                .retrieve()
+                .onStatus(
+                        HttpStatusCode::is4xxClientError,
+                        response -> response.bodyToMono(String.class)
+                                .defaultIfEmpty("Unable to reserve stock")
+                                .flatMap(body -> Mono.error(new ResponseStatusException(response.statusCode(), body)))
+                )
                 .bodyToMono(ProductResponse.class);
     }
 }

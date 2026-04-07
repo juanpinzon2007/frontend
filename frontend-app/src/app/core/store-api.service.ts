@@ -49,6 +49,14 @@ export class StoreApiService {
     return this.http.post<Product>(`${this.apiUrl}/products`, payload);
   }
 
+  updateProduct(productId: string, payload: CreateProductPayload): Observable<Product> {
+    return this.http.put<Product>(`${this.apiUrl}/products/${productId}`, payload);
+  }
+
+  deleteProduct(productId: string): Observable<void> {
+    return this.http.delete<void>(`${this.apiUrl}/products/${productId}`);
+  }
+
   getOrders(): Observable<Order[]> {
     return this.http.get<Order[]>(`${this.apiUrl}/orders`);
   }

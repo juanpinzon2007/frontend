@@ -4,7 +4,7 @@
       <span class="brand__logo">SP</span>
       <div>
         <strong>Storefront Premium</strong>
-        <small>Enterprise commerce workspace</small>
+        <small>Panel operativo conectado al gateway</small>
       </div>
     </a>
 
@@ -18,7 +18,7 @@
       <a href="#catalogo" (click)="closeMobileMenu()">Catalogo</a>
       <a href="#operacion" (click)="closeMobileMenu()">Operacion</a>
       <a href="#actividad" (click)="closeMobileMenu()">Actividad</a>
-      <a href="#arquitectura" (click)="closeMobileMenu()">Arquitectura</a>
+      <a href="#arquitectura" (click)="closeMobileMenu()">Servicios</a>
     </nav>
 
     <section class="sidebar__section">
@@ -36,7 +36,7 @@
           <div class="session-card__avatar">?</div>
           <div>
             <strong>Sin autenticacion</strong>
-            <small>Inicia sesion para registrar pedidos</small>
+            <small>Inicia sesion para crear pedidos</small>
           </div>
         </article>
       }
@@ -55,25 +55,38 @@
         </article>
       </div>
     </section>
+
+    <section class="sidebar__section">
+      <p class="section-label">Servicios</p>
+      <div class="service-list">
+        @for (service of serviceHealth(); track service.label) {
+          <article class="service-item">
+            <span class="service-dot" [class.service-dot--success]="service.tone === 'success'" [class.service-dot--danger]="service.tone === 'danger'"></span>
+            <div>
+              <strong>{{ service.label }}</strong>
+              <small>{{ service.state }}</small>
+            </div>
+          </article>
+        }
+      </div>
+    </section>
   </aside>
 
   <section class="workspace-main">
     <header class="topbar panel-surface">
       <div>
         <p class="eyebrow">Panel empresarial</p>
-        <h1>Frontend Angular elegante, claro y listo para operar.</h1>
+        <h1>Flujo corregido para acceso, catalogo y pedidos.</h1>
       </div>
 
       <div class="topbar__actions">
-        <div class="status-pill" [class.status-pill--live]="products().length > 0 || orders().length > 0">
+        <div class="status-pill" [class.status-pill--live]="!productError() && !orderError()">
           <span></span>
-          {{ products().length > 0 || orders().length > 0 ? 'Sincronizacion activa' : 'Esperando datos' }}
+          {{ !productError() && !orderError() ? 'Servicios sincronizados' : 'Revisar incidencias' }}
         </div>
 
         @if (currentUser()) {
-          <button type="button" class="button button--secondary" (click)="logout()">
-            Cerrar sesion
-          </button>
+          <button type="button" class="button button--secondary" (click)="logout()">Cerrar sesion</button>
         } @else {
           <a class="button button--primary" href="#acceso">Iniciar sesion</a>
         }
@@ -84,20 +97,20 @@
       <article class="hero-card panel-surface panel-surface--dark">
         <div class="hero-card__header">
           <div>
-            <p class="eyebrow eyebrow--light">Identidad visual del sistema</p>
-            <h2>Una experiencia SaaS corporativa con jerarquia fuerte y bajo ruido visual.</h2>
+            <p class="eyebrow eyebrow--light">Correccion integral</p>
+            <h2>La plataforma ya trabaja con autenticacion, CRUD de catalogo y pedidos con stock consistente.</h2>
           </div>
-          <span class="hero-badge">Enterprise UI</span>
+          <span class="hero-badge">Angular + Spring</span>
         </div>
 
         <p class="hero-card__text">
-          La interfaz prioriza productividad, lectura rapida y escalabilidad visual mediante un
-          sistema consistente de tarjetas, paneles, formularios, estados y navegacion lateral.
+          Se corrigio la operacion completa: registro e inicio de sesion, actualizacion del catalogo,
+          eliminacion de productos y sincronizacion del inventario al crear pedidos.
         </p>
 
         <div class="hero-card__actions">
-          <a class="button button--primary" href="#catalogo">Explorar catalogo</a>
-          <a class="button button--ghost" href="#operacion">Gestionar operacion</a>
+          <a class="button button--primary" href="#acceso">Validar acceso</a>
+          <a class="button button--ghost" href="#operacion">Gestionar catalogo</a>
         </div>
 
         <div class="badge-row">
@@ -113,8 +126,8 @@
       <article class="executive-card panel-surface">
         <div class="section-head">
           <div>
-            <p class="eyebrow">Dashboard empresarial</p>
-            <h3>Resumen ejecutivo</h3>
+            <p class="eyebrow">Resumen ejecutivo</p>
+            <h3>Estado actual de la plataforma</h3>
           </div>
           <span class="mini-tag">Live data</span>
         </div>
@@ -164,27 +177,27 @@
       <article class="kpi-card panel-surface panel-surface--accent">
         <p class="section-label">Valor de inventario</p>
         <strong>{{ inventoryValue() | currency:'USD' }}</strong>
-        <p>Tarjeta de metrica con foco en indicadores prioritarios y lectura inmediata.</p>
+        <p>Vista rapida del capital inmovilizado en referencias activas.</p>
       </article>
 
       <article class="kpi-card panel-surface">
         <p class="section-label">Sesion actual</p>
         <strong>{{ isAuthenticated() ? 'Activa' : 'Pendiente' }}</strong>
-        <p>La interfaz orienta primero la accion principal y luego el detalle operativo.</p>
+        <p>El flujo de pedidos queda habilitado solo cuando el usuario inicia sesion.</p>
       </article>
 
       <article class="kpi-card panel-surface">
         <p class="section-label">Producto premium</p>
         <strong>{{ premiumProduct() ? premiumProduct()!.name : 'Sin datos' }}</strong>
         <p>
-          {{ premiumProduct() ? (premiumProduct()!.price | currency:'USD') : 'Esperando catalogo para priorizar el producto de mayor valor.' }}
+          {{ premiumProduct() ? (premiumProduct()!.price | currency:'USD') : 'Carga o crea productos para priorizar el catalogo.' }}
         </p>
       </article>
 
       <article class="kpi-card panel-surface">
-        <p class="section-label">Arquitectura visual</p>
-        <strong>Minimalista y modular</strong>
-        <p>Cards, grids, sidebar, formularios y feedback comparten un mismo lenguaje visual.</p>
+        <p class="section-label">Stock bajo</p>
+        <strong>{{ lowStockProducts().length }}</strong>
+        <p>Alertas tempranas para referencias que necesitan reposicion.</p>
       </article>
     </section>
 
@@ -193,8 +206,8 @@
         <article class="content-panel panel-surface" id="acceso">
           <div class="section-head section-head--split">
             <div>
-              <p class="eyebrow">Formularios esteticos y usables</p>
-              <h2>Acceso claro, compacto y enfocado en productividad.</h2>
+              <p class="eyebrow">Acceso corregido</p>
+              <h2>Registro e inicio de sesion con validacion clara y persistencia local.</h2>
             </div>
 
             <div class="segment-control" aria-label="Modo de autenticacion">
@@ -227,7 +240,7 @@
           @if (authMode() === 'login') {
             <form [formGroup]="loginForm" (ngSubmit)="submitLogin()" class="form-grid">
               <label class="field field--full">
-                <span>Correo corporativo</span>
+                <span>Correo</span>
                 <input type="email" formControlName="email" placeholder="cliente@empresa.com" />
                 @if (hasFieldError('login', 'email')) {
                   <small class="field-error">Ingresa un correo valido.</small>
@@ -282,8 +295,8 @@
         <article class="content-panel panel-surface" id="catalogo">
           <div class="section-head">
             <div>
-              <p class="eyebrow">Paleta, cards y tablas visuales</p>
-              <h2>Catalogo con filtros limpios, tarjetas sobrias y lectura comercial rapida.</h2>
+              <p class="eyebrow">Catalogo funcional</p>
+              <h2>Busqueda, refresco y gestion directa de referencias.</h2>
             </div>
             <button type="button" class="button button--secondary" (click)="loadProducts()">
               Actualizar catalogo
@@ -325,7 +338,7 @@
             <article class="empty-state">
               <p class="eyebrow">Sin resultados</p>
               <h3>No hay productos para el filtro actual.</h3>
-              <p>Ajusta la busqueda o agrega una referencia desde el modulo operativo.</p>
+              <p>Ajusta la busqueda o crea una referencia nueva desde el modulo operativo.</p>
             </article>
           } @else {
             <div class="catalog-grid">
@@ -347,6 +360,20 @@
                       {{ product.availableStock <= 5 ? 'Reposicion sugerida' : 'Cobertura estable' }}
                     </span>
                   </div>
+
+                  <div class="card-actions">
+                    <button type="button" class="button button--ghost" (click)="startProductEdition(product)">
+                      Editar
+                    </button>
+                    <button
+                      type="button"
+                      class="button button--danger"
+                      [disabled]="deletingProductId() === product.id"
+                      (click)="deleteProduct(product)"
+                    >
+                      {{ deletingProductId() === product.id ? 'Eliminando...' : 'Eliminar' }}
+                    </button>
+                  </div>
                 </article>
               }
             </div>
@@ -356,8 +383,8 @@
         <article class="content-panel panel-surface" id="operacion">
           <div class="section-head">
             <div>
-              <p class="eyebrow">Diseno de componentes</p>
-              <h2>Operacion unificada para productos y pedidos sin romper el flujo actual.</h2>
+              <p class="eyebrow">Operacion unificada</p>
+              <h2>Productos y pedidos conectados a servicios reales.</h2>
             </div>
           </div>
 
@@ -365,10 +392,23 @@
             <section class="operation-card">
               <div class="section-head section-head--compact">
                 <div>
-                  <p class="section-label">Nuevo producto</p>
-                  <h3>Agregar referencia</h3>
+                  <p class="section-label">{{ isEditingProduct() ? 'Edicion de producto' : 'Nuevo producto' }}</p>
+                  <h3>{{ isEditingProduct() ? 'Actualizar referencia' : 'Agregar referencia' }}</h3>
                 </div>
+                @if (isEditingProduct()) {
+                  <button type="button" class="button button--ghost" (click)="cancelProductEdition()">
+                    Cancelar
+                  </button>
+                }
               </div>
+
+              @if (productBeingEdited(); as edited) {
+                <article class="selection-card selection-card--info">
+                  <span>Editando</span>
+                  <strong>{{ edited.name }}</strong>
+                  <small>ID {{ edited.id }}</small>
+                </article>
+              }
 
               <form [formGroup]="productForm" (ngSubmit)="submitProduct()" class="form-grid">
                 <label class="field">
@@ -389,14 +429,14 @@
 
                 <label class="field field--full">
                   <span>Descripcion</span>
-                  <textarea formControlName="description" rows="4" placeholder="Descripcion comercial premium."></textarea>
+                  <textarea formControlName="description" rows="4" placeholder="Descripcion comercial del producto"></textarea>
                   @if (hasFieldError('product', 'description')) {
                     <small class="field-error">La descripcion debe tener al menos 10 caracteres.</small>
                   }
                 </label>
 
                 <label class="field">
-                  <span>Stock inicial</span>
+                  <span>Stock disponible</span>
                   <input type="number" formControlName="availableStock" min="1" />
                   @if (hasFieldError('product', 'availableStock')) {
                     <small class="field-error">El stock minimo es 1.</small>
@@ -404,7 +444,11 @@
                 </label>
 
                 <button type="submit" class="button button--secondary field--full" [disabled]="isSubmittingProduct()">
-                  {{ isSubmittingProduct() ? 'Guardando...' : 'Guardar producto' }}
+                  {{
+                    isSubmittingProduct()
+                      ? (isEditingProduct() ? 'Actualizando...' : 'Guardando...')
+                      : (isEditingProduct() ? 'Actualizar producto' : 'Guardar producto')
+                  }}
                 </button>
               </form>
             </section>
@@ -415,9 +459,7 @@
                   <p class="section-label">Nuevo pedido</p>
                   <h3>Crear orden de compra</h3>
                 </div>
-                <button type="button" class="button button--ghost" (click)="loadOrders()">
-                  Actualizar pedidos
-                </button>
+                <button type="button" class="button button--ghost" (click)="loadOrders()">Actualizar pedidos</button>
               </div>
 
               @if (orderError()) {
@@ -433,7 +475,7 @@
                   <select formControlName="productId">
                     @for (product of products(); track product.id) {
                       <option [value]="product.id">
-                        {{ product.name }} - {{ product.price | currency:'USD' }}
+                        {{ product.name }} - {{ product.price | currency:'USD' }} - Stock {{ product.availableStock }}
                       </option>
                     }
                   </select>
@@ -467,7 +509,11 @@
                   }
                 </article>
 
-                <button type="submit" class="button button--primary field--full" [disabled]="isSubmittingOrder()">
+                <button
+                  type="submit"
+                  class="button button--primary field--full"
+                  [disabled]="isSubmittingOrder() || !products().length"
+                >
                   {{ isSubmittingOrder() ? 'Procesando pedido...' : 'Registrar pedido' }}
                 </button>
               </form>
@@ -478,20 +524,20 @@
 
       <aside class="content-aside">
         <article class="side-panel panel-surface">
-          <p class="eyebrow">Responsive y consistencia</p>
+          <p class="eyebrow">Buenas practicas</p>
           <h3>Guia visual reusable</h3>
           <div class="mini-list">
             <article>
-              <span>Color</span>
-              <strong>Azules corporativos, neutrales frios y acentos medidos.</strong>
+              <span>Errores</span>
+              <strong>La interfaz ya muestra mensajes del backend y fallos de conectividad.</strong>
             </article>
             <article>
-              <span>Tipografia</span>
-              <strong>Sora para jerarquia y Plus Jakarta Sans para lectura continua.</strong>
+              <span>CRUD</span>
+              <strong>El catalogo permite crear, editar, eliminar y refrescar sin recargar la pagina.</strong>
             </article>
             <article>
-              <span>Espaciado</span>
-              <strong>Sistema de 4, 8, 12, 16, 24 y 32 px para escalar modulos.</strong>
+              <span>Consistencia</span>
+              <strong>Los pedidos descuentan stock para no dejar datos incoherentes entre servicios.</strong>
             </article>
           </div>
         </article>
@@ -534,8 +580,8 @@
         <article class="side-panel panel-surface" id="arquitectura">
           <div class="section-head section-head--compact">
             <div>
-              <p class="eyebrow">Estilo empresarial moderno</p>
-              <h3>Base visual escalable</h3>
+              <p class="eyebrow">Servicios de plataforma</p>
+              <h3>Base funcional escalable</h3>
             </div>
           </div>
 

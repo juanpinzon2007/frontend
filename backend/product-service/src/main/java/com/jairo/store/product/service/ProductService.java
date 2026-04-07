@@ -60,6 +60,20 @@ public class ProductService {
                 .flatMap(productRepository::delete);
     }
 
+    public Mono<ProductResponse> reserveStock(UUID id, Integer quantity) {
+        return productRepository.findById(id)
+                .switchIfEmpty(Mono.error(new ResponseStatusException(HttpStatus.NOT_FOUND, "Product not found")))
+                .flatMap(product -> {
+                    if (product.getAvailableStock() < quantity) {
+                        return Mono.error(new ResponseStatusException(HttpStatus.BAD_REQUEST, "Insufficient stock available"));
+                    }
+
+                    product.setAvailableStock(product.getAvailableStock() - quantity);
+                    return productRepository.save(product);
+                })
+                .map(this::toResponse);
+    }
+
     private ProductResponse toResponse(Product product) {
         return new ProductResponse(
                 product.getId(),
