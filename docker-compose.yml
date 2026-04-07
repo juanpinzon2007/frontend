@@ -125,7 +125,7 @@ services:
       context: .
       dockerfile: frontend-app/Dockerfile
     environment:
-      API_URL: http://localhost:8080/api
+      API_URL: http://api-gateway:8080/api
     depends_on:
       api-gateway:
         condition: service_started

@@ -33,6 +33,12 @@ Servicios:
 - Order service: `http://localhost:8082`
 - Auth service: `http://localhost:8083`
 
+Nota de despliegue:
+
+- Si el frontend corre en Docker o Cloud Run, `API_URL` debe apuntar al gateway real.
+- En `docker-compose` el valor correcto es `http://api-gateway:8080/api`, no `http://localhost:8080/api`.
+- Si el frontend responde con `405 Not Allowed` al hacer `POST /api/...`, normalmente significa que `nginx` no tiene el proxy hacia el gateway y esta intentando resolver `/api` como contenido estatico.
+
 ## Desarrollo del frontend
 
 ```bash
