@@ -59,6 +59,10 @@ En Windows:
 
 ## Despliegue en Google Cloud
 
+Si usas despliegue desde repositorio en Cloud Run o un trigger de Cloud Build sin configuracion personalizada, Google intentara construir `/workspace/Dockerfile`. Este repositorio ya incluye un `Dockerfile` en la raiz para ese caso y construye el frontend Angular.
+
+Si necesitas construir todas las imagenes del sistema, usa `cloudbuild.yaml`.
+
 1. Crea un Artifact Registry Docker.
 2. Ejecuta `cloudbuild.yaml` para construir y publicar las imagenes.
 3. Crea PostgreSQL en Cloud SQL con IP privada.
