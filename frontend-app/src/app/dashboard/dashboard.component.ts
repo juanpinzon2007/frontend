@@ -1,11 +1,12 @@
-import { CurrencyPipe, DatePipe } from '@angular/common';
+import { CurrencyPipe, DatePipe, DecimalPipe } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
-import { Component, DestroyRef, computed, inject, signal } from '@angular/core';
+import { Component, DestroyRef, computed, effect, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { AbstractControl, FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import { Router } from '@angular/router';
 import { finalize } from 'rxjs';
-import { AuthApiService, AuthResponse, LoginPayload, RegisterPayload } from '../core/auth-api.service';
 import { AuthSessionService } from '../core/auth-session.service';
+import { UserRole } from '../core/auth.models';
 import {
   CreateOrderPayload,
   CreateProductPayload,
@@ -14,48 +15,162 @@ import {
   StoreApiService
 } from '../core/store-api.service';
 
-type AuthMode = 'login' | 'register';
-type FormGroupName = 'product' | 'order' | 'login' | 'register';
+type WorkspaceSection = 'overview' | 'catalog' | 'operations' | 'orders' | 'analytics' | 'team';
+type FormGroupName = 'product' | 'order';
 type ProductSort = 'featured' | 'price-desc' | 'price-asc' | 'stock-desc';
 
-const STRICT_EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+interface NavigationItem {
+  id: WorkspaceSection;
+  label: string;
+  description: string;
+  iconPath: string;
+  roles: readonly UserRole[];
+}
+
+const NAVIGATION_ITEMS: readonly NavigationItem[] = [
+  {
+    id: 'overview',
+    label: 'Resumen',
+    description: 'Indicadores clave de la operacion comercial.',
+    iconPath: 'M3 13h8V3H3v10Zm0 8h8v-6H3v6Zm10 0h8V11h-8v10Zm0-18v6h8V3h-8Z',
+    roles: ['ADMIN', 'OPERATIONS', 'ANALYST', 'USER']
+  },
+  {
+    id: 'catalog',
+    label: 'Catalogo',
+    description: 'Consulta y mantenimiento de referencias de producto.',
+    iconPath: 'M4 4h16v4H4V4Zm0 6h10v10H4V10Zm12 0h4v4h-4v-4Zm0 6h4v4h-4v-4Z',
+    roles: ['ADMIN', 'OPERATIONS', 'USER']
+  },
+  {
+    id: 'operations',
+    label: 'Operacion',
+    description: 'Flujo de alta de productos y creacion de pedidos.',
+    iconPath: 'M19 3h2v7h-2V3Zm-8 4h2v14h-2V7ZM3 11h2v10H3V11Zm8-8h2v2h-2V3Z',
+    roles: ['ADMIN', 'OPERATIONS', 'USER']
+  },
+  {
+    id: 'orders',
+    label: 'Pedidos',
+    description: 'Seguimiento de pedidos recientes y estados.',
+    iconPath: 'M7 3h10l4 4v14H3V3h4Zm8 2H9v4h6V5Zm2 12H7v2h10v-2Zm0-4H7v2h10v-2Z',
+    roles: ['ADMIN', 'OPERATIONS', 'ANALYST', 'USER']
+  },
+  {
+    id: 'analytics',
+    label: 'Analitica',
+    description: 'Rentabilidad, ticket promedio y trazabilidad.',
+    iconPath: 'M3 19h18v2H1V3h2v16Zm4-6h3v6H7v-6Zm5-4h3v10h-3V9Zm5-5h3v15h-3V4Z',
+    roles: ['ADMIN', 'OPERATIONS', 'ANALYST']
+  },
+  {
+    id: 'team',
+    label: 'Equipo',
+    description: 'Controles de perfil, cumplimiento y seguridad.',
+    iconPath: 'M7 11a4 4 0 1 1 0-8 4 4 0 0 1 0 8Zm10 1a3 3 0 1 1 0-6 3 3 0 0 1 0 6ZM2 21v-2a5 5 0 0 1 5-5h1a5 5 0 0 1 5 5v2H2Zm12 0v-1a4 4 0 0 1 4-4 4 4 0 0 1 4 4v1h-8Z',
+    roles: ['ADMIN']
+  }
+];
+
+const ROLE_LABEL: Record<UserRole, string> = {
+  ADMIN: 'Administrador',
+  OPERATIONS: 'Operaciones',
+  ANALYST: 'Analista',
+  USER: 'Usuario'
+};
+
+const SECTION_HEADLINES: Record<WorkspaceSection, { title: string; description: string }> = {
+  overview: {
+    title: 'Centro de control comercial',
+    description: 'Monitorea inventario, revenue y salud operativa en tiempo real.'
+  },
+  catalog: {
+    title: 'Gestion de catalogo',
+    description: 'Consulta inventario, filtra productos y ejecuta mantenimiento seguro.'
+  },
+  operations: {
+    title: 'Operacion de negocio',
+    description: 'Registra productos y pedidos sincronizando stock contra backend.'
+  },
+  orders: {
+    title: 'Seguimiento de pedidos',
+    description: 'Revisa flujo transaccional y estados de orden para control diario.'
+  },
+  analytics: {
+    title: 'Analitica empresarial',
+    description: 'Evalua ticket promedio, clientes frecuentes y referencias de mayor impacto.'
+  },
+  team: {
+    title: 'Administracion de equipo',
+    description: 'Visibilidad de perfiles, cumplimiento y practicas de seguridad.'
+  }
+};
 
 @Component({
   selector: 'app-dashboard',
-  imports: [ReactiveFormsModule, CurrencyPipe, DatePipe],
+  imports: [ReactiveFormsModule, CurrencyPipe, DatePipe, DecimalPipe],
   templateUrl: './dashboard.component.html',
   styleUrl: './dashboard.component.scss'
 })
 export class DashboardComponent {
   private readonly api = inject(StoreApiService);
-  private readonly authApi = inject(AuthApiService);
   private readonly authSession = inject(AuthSessionService);
   private readonly formBuilder = inject(FormBuilder);
   private readonly destroyRef = inject(DestroyRef);
+  private readonly router = inject(Router);
 
-  readonly authMode = signal<AuthMode>('login');
+  readonly currentUser = this.authSession.currentUser;
+  readonly isAuthenticated = this.authSession.isAuthenticated;
+  readonly currentRole = computed<UserRole>(() => this.currentUser()?.role ?? 'ANALYST');
+  readonly roleLabel = computed(() => ROLE_LABEL[this.currentRole()]);
   readonly isMobileMenuOpen = signal(false);
+  readonly activeSection = signal<WorkspaceSection>('overview');
+
   readonly catalogQuery = signal('');
   readonly catalogSort = signal<ProductSort>('featured');
   readonly products = signal<Product[]>([]);
   readonly orders = signal<Order[]>([]);
   readonly editingProductId = signal<string | null>(null);
   readonly deletingProductId = signal<string | null>(null);
+
   readonly isLoadingProducts = signal(false);
   readonly isLoadingOrders = signal(false);
   readonly isSubmittingProduct = signal(false);
   readonly isSubmittingOrder = signal(false);
-  readonly isSubmittingAuth = signal(false);
+
   readonly productError = signal('');
   readonly orderError = signal('');
-  readonly authError = signal('');
   readonly productSuccess = signal('');
   readonly orderSuccess = signal('');
-  readonly authSuccess = signal('');
 
-  readonly currentUser = this.authSession.currentUser;
-  readonly isAuthenticated = computed(() => this.currentUser() !== null);
-  readonly isEditingProduct = computed(() => this.editingProductId() !== null);
+  readonly teamMembers = [
+    { name: 'Maria Rojas', role: 'Product Owner', area: 'Comercial', status: 'Activo' },
+    { name: 'Daniel Suarez', role: 'Ops Lead', area: 'Inventario', status: 'Activo' },
+    { name: 'Andres Pineda', role: 'Finance Analyst', area: 'Analitica', status: 'En revision' }
+  ];
+
+  readonly governanceChecklist = [
+    'Control de sesiones con cierre seguro por perfil.',
+    'Permisos por rol para evitar operaciones no autorizadas.',
+    'Trazabilidad de pedidos y validaciones de stock previas.'
+  ];
+
+  readonly navigationItems = computed(() =>
+    NAVIGATION_ITEMS.filter(item => item.roles.includes(this.currentRole()))
+  );
+  readonly activeSectionMeta = computed(() => SECTION_HEADLINES[this.activeSection()]);
+
+  readonly canManageCatalog = computed(
+    () => this.currentRole() === 'ADMIN' || this.currentRole() === 'OPERATIONS'
+  );
+  readonly canManageOrders = computed(
+    () =>
+      this.currentRole() === 'ADMIN' ||
+      this.currentRole() === 'OPERATIONS' ||
+      this.currentRole() === 'USER'
+  );
+  readonly canViewTeamPanel = computed(() => this.currentRole() === 'ADMIN');
+
   readonly totalInventory = computed(() => this.products().reduce((sum, item) => sum + item.availableStock, 0));
   readonly inventoryValue = computed(() =>
     this.products().reduce((sum, item) => sum + item.price * item.availableStock, 0)
@@ -70,22 +185,22 @@ export class DashboardComponent {
 
     return currentOrders.reduce((sum, order) => sum + order.totalPrice, 0) / currentOrders.length;
   });
+
   readonly selectedProduct = computed(() => {
     const selectedId = this.orderForm.controls.productId.value;
     return this.products().find(product => product.id === selectedId) ?? null;
   });
+
   readonly orderPreviewTotal = computed(() => {
     const product = this.selectedProduct();
     return product ? product.price * this.orderForm.controls.quantity.value : 0;
   });
-  readonly premiumProduct = computed(() => {
-    const currentProducts = this.products();
-    return [...currentProducts].sort((left, right) => right.price - left.price)[0] ?? null;
-  });
+
   readonly productBeingEdited = computed(() => {
     const productId = this.editingProductId();
     return this.products().find(product => product.id === productId) ?? null;
   });
+
   readonly filteredProducts = computed(() => {
     const query = this.catalogQuery().trim().toLowerCase();
     const sorted = [...this.products()];
@@ -105,7 +220,6 @@ export class DashboardComponent {
           if (right.availableStock !== left.availableStock) {
             return right.availableStock - left.availableStock;
           }
-
           return right.price - left.price;
         });
         break;
@@ -119,44 +233,41 @@ export class DashboardComponent {
       [product.name, product.description].some(value => value.toLowerCase().includes(query))
     );
   });
+
   readonly recentOrders = computed(() =>
     [...this.orders()]
       .sort((left, right) => new Date(right.createdAt).getTime() - new Date(left.createdAt).getTime())
-      .slice(0, 6)
+      .slice(0, 8)
   );
-  readonly serviceHealth = computed(() => [
-    {
-      label: 'Autenticacion',
-      state: this.authError() ? 'Atencion' : this.isAuthenticated() ? 'Operativo' : 'Disponible',
-      tone: this.authError() ? 'danger' : this.isAuthenticated() ? 'success' : 'neutral'
-    },
-    {
-      label: 'Catalogo',
-      state: this.productError() ? 'Atencion' : this.products().length ? 'Operativo' : 'Sin datos',
-      tone: this.productError() ? 'danger' : this.products().length ? 'success' : 'neutral'
-    },
-    {
-      label: 'Pedidos',
-      state: this.orderError() ? 'Atencion' : this.orders().length ? 'Operativo' : 'Disponible',
-      tone: this.orderError() ? 'danger' : this.orders().length ? 'success' : 'neutral'
-    }
-  ]);
 
-  readonly experienceBadges = [
-    { value: '01', label: 'autenticacion, catalogo y pedidos en un mismo flujo' },
-    { value: '02', label: 'CRUD real para el catalogo con refresco de datos' },
-    { value: '03', label: 'validaciones sincronizadas entre frontend y backend' }
-  ];
-  readonly trustPoints = [
-    'Los formularios muestran errores reales del backend y validaciones antes de enviar.',
-    'El catalogo ya permite crear, editar, eliminar y refrescar referencias.',
-    'Los pedidos reservan stock para evitar operaciones incoherentes en la plataforma.'
-  ];
-  readonly architecturePoints = [
-    'Gateway unico para auth-service, product-service y order-service.',
-    'Angular standalone con signals para estado local y formularios reactivos.',
-    'Microservicios con validacion consistente y persistencia separada.'
-  ];
+  readonly topProducts = computed(() =>
+    [...this.products()]
+      .sort((left, right) => right.price * right.availableStock - left.price * left.availableStock)
+      .slice(0, 5)
+  );
+
+  readonly topCustomers = computed(() => {
+    const customerMap = this.orders().reduce<Map<string, number>>((acc, order) => {
+      const key = order.customerName?.trim() || 'Cliente general';
+      acc.set(key, (acc.get(key) ?? 0) + order.totalPrice);
+      return acc;
+    }, new Map<string, number>());
+
+    return [...customerMap.entries()]
+      .map(([customer, total]) => ({ customer, total }))
+      .sort((left, right) => right.total - left.total)
+      .slice(0, 5);
+  });
+
+  readonly ordersByStatus = computed(() => {
+    const statusMap = this.orders().reduce<Map<string, number>>((acc, order) => {
+      const key = order.status || 'Sin estado';
+      acc.set(key, (acc.get(key) ?? 0) + 1);
+      return acc;
+    }, new Map<string, number>());
+
+    return [...statusMap.entries()].map(([status, total]) => ({ status, total }));
+  });
 
   readonly productForm = this.formBuilder.nonNullable.group({
     name: ['', [Validators.required, Validators.minLength(3)]],
@@ -168,27 +279,28 @@ export class DashboardComponent {
   readonly orderForm = this.formBuilder.nonNullable.group({
     productId: ['', Validators.required],
     quantity: [1, [Validators.required, Validators.min(1)]],
-    customerName: ['']
-  });
-
-  readonly loginForm = this.formBuilder.nonNullable.group({
-    email: ['', [Validators.required, Validators.email, Validators.pattern(STRICT_EMAIL_PATTERN)]],
-    password: ['', [Validators.required, Validators.minLength(8)]]
-  });
-
-  readonly registerForm = this.formBuilder.nonNullable.group({
-    fullName: ['', [Validators.required, Validators.minLength(3)]],
-    email: ['', [Validators.required, Validators.email, Validators.pattern(STRICT_EMAIL_PATTERN)]],
-    password: [
-      '',
-      [Validators.required, Validators.minLength(8), Validators.pattern(/^(?=.*[A-Za-z])(?=.*\d).+$/)]
-    ]
+    customerName: ['', [Validators.required, Validators.minLength(2)]]
   });
 
   constructor() {
-    this.syncOrderCustomerWithSession();
     this.loadProducts();
     this.loadOrders();
+
+    effect(() => {
+      const user = this.currentUser();
+      this.orderForm.patchValue({ customerName: user?.fullName ?? '' }, { emitEvent: false });
+    });
+
+    effect(
+      () => {
+        const allowedSections = this.navigationItems();
+        const section = this.activeSection();
+        if (allowedSections.length && !allowedSections.some(item => item.id === section)) {
+          this.activeSection.set(allowedSections[0].id);
+        }
+      },
+      { allowSignalWrites: true }
+    );
   }
 
   toggleMobileMenu(): void {
@@ -199,10 +311,18 @@ export class DashboardComponent {
     this.isMobileMenuOpen.set(false);
   }
 
-  setAuthMode(mode: AuthMode): void {
-    this.authMode.set(mode);
-    this.authError.set('');
-    this.authSuccess.set('');
+  selectSection(section: WorkspaceSection): void {
+    if (!this.navigationItems().some(item => item.id === section)) {
+      return;
+    }
+
+    this.activeSection.set(section);
+    this.closeMobileMenu();
+  }
+
+  logout(): void {
+    this.authSession.clearSession();
+    void this.router.navigate(['/login']);
   }
 
   loadProducts(): void {
@@ -244,72 +364,6 @@ export class DashboardComponent {
       });
   }
 
-  submitRegister(): void {
-    if (this.registerForm.invalid) {
-      this.registerForm.markAllAsTouched();
-      return;
-    }
-
-    this.authError.set('');
-    this.authSuccess.set('');
-    this.isSubmittingAuth.set(true);
-
-    const payload = this.registerForm.getRawValue() as RegisterPayload;
-
-    this.authApi
-      .register(payload)
-      .pipe(
-        takeUntilDestroyed(this.destroyRef),
-        finalize(() => this.isSubmittingAuth.set(false))
-      )
-      .subscribe({
-        next: response => {
-          this.applySession(response, 'Cuenta creada e inicio de sesion completado.');
-          this.registerForm.reset({ fullName: '', email: '', password: '' });
-          this.loginForm.reset({ email: response.email, password: '' });
-        },
-        error: error => {
-          this.authError.set(this.getErrorMessage(error, 'No fue posible crear la cuenta.'));
-        }
-      });
-  }
-
-  submitLogin(): void {
-    if (this.loginForm.invalid) {
-      this.loginForm.markAllAsTouched();
-      return;
-    }
-
-    this.authError.set('');
-    this.authSuccess.set('');
-    this.isSubmittingAuth.set(true);
-
-    const payload = this.loginForm.getRawValue() as LoginPayload;
-
-    this.authApi
-      .login(payload)
-      .pipe(
-        takeUntilDestroyed(this.destroyRef),
-        finalize(() => this.isSubmittingAuth.set(false))
-      )
-      .subscribe({
-        next: response => {
-          this.applySession(response, 'Sesion iniciada correctamente.');
-          this.loginForm.reset({ email: response.email, password: '' });
-        },
-        error: error => {
-          this.authError.set(this.getErrorMessage(error, 'No fue posible iniciar sesion.'));
-        }
-      });
-  }
-
-  logout(): void {
-    this.authSession.clearSession();
-    this.orderForm.patchValue({ customerName: '' });
-    this.authSuccess.set('Sesion cerrada correctamente.');
-    this.authError.set('');
-  }
-
   setCatalogQuery(query: string): void {
     this.catalogQuery.set(query);
   }
@@ -319,6 +373,10 @@ export class DashboardComponent {
   }
 
   startProductEdition(product: Product): void {
+    if (!this.canManageCatalog()) {
+      return;
+    }
+
     this.editingProductId.set(product.id);
     this.productError.set('');
     this.productSuccess.set('');
@@ -337,6 +395,11 @@ export class DashboardComponent {
   }
 
   submitProduct(): void {
+    if (!this.canManageCatalog()) {
+      this.productError.set('Tu rol no tiene permisos para editar catalogo.');
+      return;
+    }
+
     if (this.productForm.invalid) {
       this.productForm.markAllAsTouched();
       return;
@@ -384,6 +447,11 @@ export class DashboardComponent {
   }
 
   deleteProduct(product: Product): void {
+    if (!this.canManageCatalog()) {
+      this.productError.set('Tu rol no tiene permisos para eliminar productos.');
+      return;
+    }
+
     this.productError.set('');
     this.productSuccess.set('');
     this.deletingProductId.set(product.id);
@@ -412,7 +480,11 @@ export class DashboardComponent {
   submitOrder(): void {
     if (!this.isAuthenticated()) {
       this.orderError.set('Debes iniciar sesion para registrar un pedido.');
-      this.authMode.set('login');
+      return;
+    }
+
+    if (!this.canManageOrders()) {
+      this.orderError.set('Tu rol actual tiene acceso de solo lectura para pedidos.');
       return;
     }
 
@@ -448,8 +520,7 @@ export class DashboardComponent {
         next: order => {
           this.orders.update(items => [order, ...items]);
           this.orderForm.patchValue({
-            quantity: 1,
-            customerName: this.currentUser()?.fullName ?? ''
+            quantity: 1
           });
           this.orderSuccess.set('Pedido creado y stock actualizado.');
           this.loadProducts();
@@ -463,27 +534,22 @@ export class DashboardComponent {
   hasFieldError(formName: FormGroupName, controlName: string): boolean {
     const form = {
       product: this.productForm,
-      order: this.orderForm,
-      login: this.loginForm,
-      register: this.registerForm
+      order: this.orderForm
     }[formName];
 
     const control = form.controls[controlName as keyof typeof form.controls] as AbstractControl | undefined;
     return !!control && control.invalid && (control.touched || control.dirty);
   }
 
-  private applySession(response: AuthResponse, successMessage: string): void {
-    this.authSession.setSession(response);
-    this.orderForm.patchValue({ customerName: response.fullName });
-    this.authSuccess.set(successMessage);
-    this.authError.set('');
-  }
-
-  private syncOrderCustomerWithSession(): void {
-    const user = this.currentUser();
-    if (user) {
-      this.orderForm.patchValue({ customerName: user.fullName });
+  getStatusTone(status: string): 'success' | 'warning' | 'neutral' {
+    const normalized = status.trim().toLowerCase();
+    if (['approved', 'completed', 'paid', 'confirmed'].includes(normalized)) {
+      return 'success';
     }
+    if (['pending', 'processing', 'created'].includes(normalized)) {
+      return 'warning';
+    }
+    return 'neutral';
   }
 
   private ensureSelectedProduct(products: Product[]): void {
@@ -491,7 +557,7 @@ export class DashboardComponent {
     const selectedExists = products.some(product => product.id === currentSelection);
 
     if (!selectedExists) {
-      this.orderForm.patchValue({ productId: products[0]?.id ?? '' });
+      this.orderForm.patchValue({ productId: products[0]?.id ?? '' }, { emitEvent: false });
     }
   }
 

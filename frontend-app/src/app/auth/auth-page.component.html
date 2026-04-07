@@ -1,0 +1,151 @@
+<main class="auth-shell">
+  <section class="auth-brand">
+    <span class="auth-brand__badge">Enterprise UI</span>
+    <h1>Control comercial profesional para equipos con roles definidos.</h1>
+    <p>
+      Inicia sesion para operar catalogo, pedidos y analitica en una experiencia moderna, segura y alineada a un
+      entorno empresarial.
+    </p>
+
+    <div class="auth-brand__cards">
+      <article>
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M12 2 3 7v6c0 5 3.8 9.7 9 11 5.2-1.3 9-6 9-11V7l-9-5Zm0 3.3 6 3.3V13c0 3.5-2.5 6.9-6 7.8-3.5-.9-6-4.3-6-7.8V8.6l6-3.3Z" />
+        </svg>
+        <div>
+          <strong>Autenticacion clara</strong>
+          <p>Control de acceso con validaciones y persistencia de sesion.</p>
+        </div>
+      </article>
+
+      <article>
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M3 4h18v4H3V4Zm0 6h10v10H3V10Zm12 0h6v4h-6v-4Zm0 6h6v4h-6v-4Z" />
+        </svg>
+        <div>
+          <strong>Menu por rol</strong>
+          <p>Cada perfil ve los modulos que corresponden a su responsabilidad.</p>
+        </div>
+      </article>
+
+      <article>
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M4 18h4v2H2V4h2v14Zm6-6h4v8h-4v-8Zm6-5h4v13h-4V7Z" />
+        </svg>
+        <div>
+          <strong>Operacion trazable</strong>
+          <p>Catalogo, inventario y pedidos sincronizados con los servicios reales.</p>
+        </div>
+      </article>
+    </div>
+  </section>
+
+  <section class="auth-panel">
+    <header class="auth-panel__header">
+      <p class="eyebrow">Acceso empresarial</p>
+      <h2>{{ authMode() === 'login' ? 'Iniciar sesion' : 'Crear cuenta' }}</h2>
+      <p>Selecciona credenciales y perfil para habilitar el menu correspondiente.</p>
+    </header>
+
+    <div class="auth-tabs" role="tablist" aria-label="Modo de autenticacion">
+      <button
+        type="button"
+        role="tab"
+        [attr.aria-selected]="authMode() === 'login'"
+        class="auth-tabs__item"
+        [class.auth-tabs__item--active]="authMode() === 'login'"
+        (click)="setAuthMode('login')"
+      >
+        Login
+      </button>
+      <button
+        type="button"
+        role="tab"
+        [attr.aria-selected]="authMode() === 'register'"
+        class="auth-tabs__item"
+        [class.auth-tabs__item--active]="authMode() === 'register'"
+        (click)="setAuthMode('register')"
+      >
+        Registro
+      </button>
+    </div>
+
+    @if (authError()) {
+      <p class="feedback feedback--error">{{ authError() }}</p>
+    }
+
+    @if (authMode() === 'login') {
+      <form [formGroup]="loginForm" (ngSubmit)="submitLogin()" class="form-grid">
+        <label class="field field--full">
+          <span>Correo corporativo</span>
+          <input type="email" formControlName="email" placeholder="usuario@empresa.com" />
+          @if (hasFieldError('login', 'email')) {
+            <small class="field-error">Ingresa un correo valido.</small>
+          }
+        </label>
+
+        <label class="field field--full">
+          <span>Contrasena</span>
+          <input type="password" formControlName="password" placeholder="Minimo 8 caracteres" />
+          @if (hasFieldError('login', 'password')) {
+            <small class="field-error">La contrasena debe tener al menos 8 caracteres.</small>
+          }
+        </label>
+
+        <label class="field field--full">
+          <span>Perfil de trabajo</span>
+          <select formControlName="role">
+            @for (role of availableRoles; track role) {
+              <option [value]="role">{{ role }}</option>
+            }
+          </select>
+          <small class="field-help">{{ roleDescriptions[loginForm.controls.role.value] }}</small>
+        </label>
+
+        <button type="submit" class="button button--primary field--full" [disabled]="isSubmitting()">
+          {{ isSubmitting() ? 'Validando acceso...' : 'Entrar al panel' }}
+        </button>
+      </form>
+    } @else {
+      <form [formGroup]="registerForm" (ngSubmit)="submitRegister()" class="form-grid">
+        <label class="field field--full">
+          <span>Nombre completo</span>
+          <input type="text" formControlName="fullName" placeholder="Responsable de operaciones" />
+          @if (hasFieldError('register', 'fullName')) {
+            <small class="field-error">Ingresa un nombre con al menos 3 caracteres.</small>
+          }
+        </label>
+
+        <label class="field">
+          <span>Correo corporativo</span>
+          <input type="email" formControlName="email" placeholder="usuario@empresa.com" />
+          @if (hasFieldError('register', 'email')) {
+            <small class="field-error">Ingresa un correo valido.</small>
+          }
+        </label>
+
+        <label class="field">
+          <span>Contrasena</span>
+          <input type="password" formControlName="password" placeholder="Letras y numeros" />
+          @if (hasFieldError('register', 'password')) {
+            <small class="field-error">Minimo 8 caracteres con letras y numeros.</small>
+          }
+        </label>
+
+        <label class="field field--full">
+          <span>Perfil inicial</span>
+          <select formControlName="role">
+            @for (role of availableRoles; track role) {
+              <option [value]="role">{{ role }}</option>
+            }
+          </select>
+          <small class="field-help">{{ roleDescriptions[registerForm.controls.role.value] }}</small>
+        </label>
+
+        <button type="submit" class="button button--primary field--full" [disabled]="isSubmitting()">
+          {{ isSubmitting() ? 'Creando cuenta...' : 'Crear cuenta y continuar' }}
+        </button>
+      </form>
+    }
+  </section>
+</main>

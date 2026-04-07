@@ -1,60 +1,23 @@
+@import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Space+Grotesk:wght@600;700&display=swap');
+
 :root {
   color-scheme: light;
-  font-family: 'Plus Jakarta Sans', 'Segoe UI', sans-serif;
+  font-family: 'Manrope', 'Segoe UI', sans-serif;
 
-  /* Core brand */
-  --color-primary-700: #0f4c81;
-  --color-primary-600: #1d5fa2;
-  --color-primary-500: #2c73c9;
-  --color-primary-100: #d9e8fb;
-  --color-accent-600: #0f8b8d;
-  --color-accent-500: #18a0a3;
+  --color-primary-700: #0f3d7a;
+  --color-primary-600: #0f578a;
+  --color-primary-500: #0b6f8b;
+  --color-accent-500: #1b8b68;
+  --color-bg: #f2f6fb;
+  --color-border: rgba(9, 31, 58, 0.12);
+  --color-border-strong: rgba(9, 31, 58, 0.22);
+  --color-text: #122033;
+  --color-text-muted: #5f7085;
+  --color-text-soft: #8694a6;
+  --color-danger: #c24a4a;
 
-  /* Neutral scale */
-  --color-bg: #f4f7fb;
-  --color-bg-elevated: #eef3f9;
-  --color-surface: rgba(255, 255, 255, 0.88);
-  --color-surface-strong: #ffffff;
-  --color-surface-dark: #0f172a;
-  --color-border: rgba(15, 23, 42, 0.09);
-  --color-border-strong: rgba(15, 23, 42, 0.16);
-  --color-text: #142033;
-  --color-text-muted: #64748b;
-  --color-text-soft: #8a97aa;
-
-  /* Semantic */
-  --color-success: #1f8f5f;
-  --color-success-soft: #eaf8f0;
-  --color-warning: #c98212;
-  --color-warning-soft: #fff5de;
-  --color-danger: #cc4b4b;
-  --color-danger-soft: #feeeee;
-  --color-info: #2c73c9;
-  --color-info-soft: #eaf2fe;
-
-  /* Effects */
-  --shadow-xs: 0 8px 20px rgba(15, 23, 42, 0.05);
-  --shadow-sm: 0 18px 44px rgba(15, 23, 42, 0.08);
-  --shadow-md: 0 30px 60px rgba(15, 23, 42, 0.12);
-  --shadow-focus: 0 0 0 4px rgba(44, 115, 201, 0.16);
-
-  /* Radius */
-  --radius-sm: 12px;
-  --radius-md: 18px;
-  --radius-lg: 24px;
-  --radius-xl: 32px;
-
-  /* Spacing */
-  --space-1: 4px;
-  --space-2: 8px;
-  --space-3: 12px;
-  --space-4: 16px;
-  --space-5: 20px;
-  --space-6: 24px;
-  --space-7: 28px;
-  --space-8: 32px;
-  --space-10: 40px;
-  --space-12: 48px;
+  --shadow-sm: 0 18px 48px rgba(7, 34, 61, 0.1);
+  --shadow-focus: 0 0 0 4px rgba(15, 87, 138, 0.18);
 }
 
 *,
@@ -72,9 +35,9 @@ body {
   min-height: 100vh;
   color: var(--color-text);
   background:
-    radial-gradient(circle at top left, rgba(44, 115, 201, 0.1), transparent 28%),
-    radial-gradient(circle at 85% 12%, rgba(24, 160, 163, 0.08), transparent 20%),
-    linear-gradient(180deg, #f8fbff 0%, var(--color-bg) 48%, #eef3f8 100%);
+    radial-gradient(circle at 12% -6%, rgba(15, 87, 138, 0.2), transparent 32%),
+    radial-gradient(circle at 88% 0%, rgba(27, 139, 104, 0.16), transparent 30%),
+    linear-gradient(180deg, #f8fbfe 0%, var(--color-bg) 46%, #edf2f8 100%);
 }
 
 body::before {
@@ -111,7 +74,7 @@ h1,
 h2,
 h3,
 h4 {
-  font-family: 'Sora', 'Segoe UI', sans-serif;
+  font-family: 'Space Grotesk', 'Segoe UI', sans-serif;
 }
 
 a {
