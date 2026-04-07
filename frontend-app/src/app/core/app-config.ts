@@ -8,6 +8,16 @@ declare global {
   }
 }
 
+const DEFAULT_API_URL = '/api';
+
+function readRuntimeConfig(): Partial<AppRuntimeConfig> | undefined {
+  if (typeof globalThis === 'undefined') {
+    return undefined;
+  }
+
+  return (globalThis as typeof globalThis & { __APP_CONFIG__?: Partial<AppRuntimeConfig> }).__APP_CONFIG__;
+}
+
 export const runtimeConfig: AppRuntimeConfig = {
-  apiUrl: window.__APP_CONFIG__?.apiUrl ?? '/api'
+  apiUrl: readRuntimeConfig()?.apiUrl ?? DEFAULT_API_URL
 };
