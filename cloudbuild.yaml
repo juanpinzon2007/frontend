@@ -1,0 +1,52 @@
+steps:
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      - 'build'
+      - '-t'
+      - '${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPOSITORY}/auth-service:$SHORT_SHA'
+      - '-f'
+      - 'backend/auth-service/Dockerfile'
+      - '.'
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      - 'build'
+      - '-t'
+      - '${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPOSITORY}/product-service:$SHORT_SHA'
+      - '-f'
+      - 'backend/product-service/Dockerfile'
+      - '.'
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      - 'build'
+      - '-t'
+      - '${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPOSITORY}/order-service:$SHORT_SHA'
+      - '-f'
+      - 'backend/order-service/Dockerfile'
+      - '.'
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      - 'build'
+      - '-t'
+      - '${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPOSITORY}/api-gateway:$SHORT_SHA'
+      - '-f'
+      - 'backend/api-gateway/Dockerfile'
+      - '.'
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      - 'build'
+      - '-t'
+      - '${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPOSITORY}/frontend:$SHORT_SHA'
+      - '-f'
+      - 'frontend-app/Dockerfile'
+      - '.'
+
+images:
+  - '${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPOSITORY}/auth-service:$SHORT_SHA'
+  - '${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPOSITORY}/product-service:$SHORT_SHA'
+  - '${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPOSITORY}/order-service:$SHORT_SHA'
+  - '${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPOSITORY}/api-gateway:$SHORT_SHA'
+  - '${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPOSITORY}/frontend:$SHORT_SHA'
+
+substitutions:
+  _REGION: us-central1
+  _REPOSITORY: store-platform

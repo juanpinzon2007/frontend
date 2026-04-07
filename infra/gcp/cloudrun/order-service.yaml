@@ -1,0 +1,37 @@
+apiVersion: serving.knative.dev/v1
+kind: Service
+metadata:
+  name: order-service
+spec:
+  template:
+    metadata:
+      annotations:
+        autoscaling.knative.dev/maxScale: "3"
+        run.googleapis.com/vpc-access-connector: projects/PROJECT_ID/locations/REGION/connectors/CLOUDRUN_VPC_CONNECTOR
+        run.googleapis.com/vpc-access-egress: private-ranges-only
+    spec:
+      serviceAccountName: CLOUD_RUN_SERVICE_ACCOUNT@PROJECT_ID.iam.gserviceaccount.com
+      containerConcurrency: 80
+      timeoutSeconds: 300
+      containers:
+        - image: REGION-docker.pkg.dev/PROJECT_ID/REPOSITORY/order-service:TAG
+          ports:
+            - containerPort: 8082
+          env:
+            - name: SERVER_PORT
+              value: "8082"
+            - name: DB_HOST
+              value: ORDER_DB_PRIVATE_IP
+            - name: DB_PORT
+              value: "5432"
+            - name: DB_NAME
+              value: orders_db
+            - name: DB_USER
+              value: orders_user
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: order-db-password
+                  key: latest
+            - name: PRODUCT_SERVICE_URL
+              value: https://product-service-xxxxx-uc.a.run.app

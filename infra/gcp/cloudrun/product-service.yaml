@@ -1,0 +1,35 @@
+apiVersion: serving.knative.dev/v1
+kind: Service
+metadata:
+  name: product-service
+spec:
+  template:
+    metadata:
+      annotations:
+        autoscaling.knative.dev/maxScale: "3"
+        run.googleapis.com/vpc-access-connector: projects/PROJECT_ID/locations/REGION/connectors/CLOUDRUN_VPC_CONNECTOR
+        run.googleapis.com/vpc-access-egress: private-ranges-only
+    spec:
+      serviceAccountName: CLOUD_RUN_SERVICE_ACCOUNT@PROJECT_ID.iam.gserviceaccount.com
+      containerConcurrency: 80
+      timeoutSeconds: 300
+      containers:
+        - image: REGION-docker.pkg.dev/PROJECT_ID/REPOSITORY/product-service:TAG
+          ports:
+            - containerPort: 8081
+          env:
+            - name: SERVER_PORT
+              value: "8081"
+            - name: DB_HOST
+              value: PRODUCT_DB_PRIVATE_IP
+            - name: DB_PORT
+              value: "5432"
+            - name: DB_NAME
+              value: products_db
+            - name: DB_USER
+              value: products_user
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: product-db-password
+                  key: latest

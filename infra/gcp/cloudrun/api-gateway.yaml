@@ -1,0 +1,28 @@
+apiVersion: serving.knative.dev/v1
+kind: Service
+metadata:
+  name: api-gateway
+spec:
+  template:
+    metadata:
+      annotations:
+        autoscaling.knative.dev/maxScale: "5"
+    spec:
+      serviceAccountName: CLOUD_RUN_SERVICE_ACCOUNT@PROJECT_ID.iam.gserviceaccount.com
+      containerConcurrency: 100
+      timeoutSeconds: 300
+      containers:
+        - image: REGION-docker.pkg.dev/PROJECT_ID/REPOSITORY/api-gateway:TAG
+          ports:
+            - containerPort: 8080
+          env:
+            - name: SERVER_PORT
+              value: "8080"
+            - name: AUTH_SERVICE_URL
+              value: https://auth-service-xxxxx-uc.a.run.app
+            - name: PRODUCT_SERVICE_URL
+              value: https://product-service-xxxxx-uc.a.run.app
+            - name: ORDER_SERVICE_URL
+              value: https://order-service-xxxxx-uc.a.run.app
+            - name: ALLOWED_ORIGINS
+              value: https://storefront-ui-xxxxx-uc.a.run.app

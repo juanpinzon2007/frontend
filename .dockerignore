@@ -1,0 +1,5 @@
+.idea
+frontend-app/node_modules
+frontend-app/dist
+**/target
+**/.DS_Store

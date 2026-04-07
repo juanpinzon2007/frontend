@@ -1,0 +1,554 @@
+<main class="workspace-shell">
+  <aside class="sidebar panel-surface">
+    <a class="brand" href="#inicio" (click)="closeMobileMenu()">
+      <span class="brand__logo">SP</span>
+      <div>
+        <strong>Storefront Premium</strong>
+        <small>Enterprise commerce workspace</small>
+      </div>
+    </a>
+
+    <button type="button" class="menu-toggle" (click)="toggleMobileMenu()">
+      {{ isMobileMenuOpen() ? 'Cerrar panel' : 'Abrir panel' }}
+    </button>
+
+    <nav class="sidebar__nav" [class.sidebar__nav--open]="isMobileMenuOpen()">
+      <a href="#inicio" (click)="closeMobileMenu()">Resumen</a>
+      <a href="#acceso" (click)="closeMobileMenu()">Acceso</a>
+      <a href="#catalogo" (click)="closeMobileMenu()">Catalogo</a>
+      <a href="#operacion" (click)="closeMobileMenu()">Operacion</a>
+      <a href="#actividad" (click)="closeMobileMenu()">Actividad</a>
+      <a href="#arquitectura" (click)="closeMobileMenu()">Arquitectura</a>
+    </nav>
+
+    <section class="sidebar__section">
+      <p class="section-label">Estado de sesion</p>
+      @if (currentUser(); as user) {
+        <article class="session-card">
+          <div class="session-card__avatar">{{ user.fullName.charAt(0) }}</div>
+          <div>
+            <strong>{{ user.fullName }}</strong>
+            <small>{{ user.email }}</small>
+          </div>
+        </article>
+      } @else {
+        <article class="session-card session-card--muted">
+          <div class="session-card__avatar">?</div>
+          <div>
+            <strong>Sin autenticacion</strong>
+            <small>Inicia sesion para registrar pedidos</small>
+          </div>
+        </article>
+      }
+    </section>
+
+    <section class="sidebar__section">
+      <p class="section-label">Indicadores</p>
+      <div class="sidebar-metrics">
+        <article class="sidebar-metric">
+          <span>Productos</span>
+          <strong>{{ products().length }}</strong>
+        </article>
+        <article class="sidebar-metric">
+          <span>Pedidos</span>
+          <strong>{{ orders().length }}</strong>
+        </article>
+      </div>
+    </section>
+  </aside>
+
+  <section class="workspace-main">
+    <header class="topbar panel-surface">
+      <div>
+        <p class="eyebrow">Panel empresarial</p>
+        <h1>Frontend Angular elegante, claro y listo para operar.</h1>
+      </div>
+
+      <div class="topbar__actions">
+        <div class="status-pill" [class.status-pill--live]="products().length > 0 || orders().length > 0">
+          <span></span>
+          {{ products().length > 0 || orders().length > 0 ? 'Sincronizacion activa' : 'Esperando datos' }}
+        </div>
+
+        @if (currentUser()) {
+          <button type="button" class="button button--secondary" (click)="logout()">
+            Cerrar sesion
+          </button>
+        } @else {
+          <a class="button button--primary" href="#acceso">Iniciar sesion</a>
+        }
+      </div>
+    </header>
+
+    <section class="hero-grid" id="inicio">
+      <article class="hero-card panel-surface panel-surface--dark">
+        <div class="hero-card__header">
+          <div>
+            <p class="eyebrow eyebrow--light">Identidad visual del sistema</p>
+            <h2>Una experiencia SaaS corporativa con jerarquia fuerte y bajo ruido visual.</h2>
+          </div>
+          <span class="hero-badge">Enterprise UI</span>
+        </div>
+
+        <p class="hero-card__text">
+          La interfaz prioriza productividad, lectura rapida y escalabilidad visual mediante un
+          sistema consistente de tarjetas, paneles, formularios, estados y navegacion lateral.
+        </p>
+
+        <div class="hero-card__actions">
+          <a class="button button--primary" href="#catalogo">Explorar catalogo</a>
+          <a class="button button--ghost" href="#operacion">Gestionar operacion</a>
+        </div>
+
+        <div class="badge-row">
+          @for (badge of experienceBadges; track badge.label) {
+            <article class="metric-badge">
+              <span>{{ badge.value }}</span>
+              <strong>{{ badge.label }}</strong>
+            </article>
+          }
+        </div>
+      </article>
+
+      <article class="executive-card panel-surface">
+        <div class="section-head">
+          <div>
+            <p class="eyebrow">Dashboard empresarial</p>
+            <h3>Resumen ejecutivo</h3>
+          </div>
+          <span class="mini-tag">Live data</span>
+        </div>
+
+        <dl class="executive-metrics">
+          <div>
+            <dt>Catalogo</dt>
+            <dd>{{ products().length }}</dd>
+          </div>
+          <div>
+            <dt>Pedidos</dt>
+            <dd>{{ orders().length }}</dd>
+          </div>
+          <div>
+            <dt>Inventario</dt>
+            <dd>{{ totalInventory() }}</dd>
+          </div>
+          <div>
+            <dt>Revenue demo</dt>
+            <dd>{{ totalRevenue() | currency:'USD' }}</dd>
+          </div>
+        </dl>
+
+        <div class="executive-highlight">
+          <div>
+            <span>Ticket promedio</span>
+            <strong>{{ averageTicket() | currency:'USD' }}</strong>
+          </div>
+          <div>
+            <span>Stock critico</span>
+            <strong>{{ lowStockProducts().length }} items</strong>
+          </div>
+        </div>
+
+        <div class="feature-list">
+          @for (point of trustPoints; track point) {
+            <article class="feature-item">
+              <span></span>
+              <p>{{ point }}</p>
+            </article>
+          }
+        </div>
+      </article>
+    </section>
+
+    <section class="kpi-grid">
+      <article class="kpi-card panel-surface panel-surface--accent">
+        <p class="section-label">Valor de inventario</p>
+        <strong>{{ inventoryValue() | currency:'USD' }}</strong>
+        <p>Tarjeta de metrica con foco en indicadores prioritarios y lectura inmediata.</p>
+      </article>
+
+      <article class="kpi-card panel-surface">
+        <p class="section-label">Sesion actual</p>
+        <strong>{{ isAuthenticated() ? 'Activa' : 'Pendiente' }}</strong>
+        <p>La interfaz orienta primero la accion principal y luego el detalle operativo.</p>
+      </article>
+
+      <article class="kpi-card panel-surface">
+        <p class="section-label">Producto premium</p>
+        <strong>{{ premiumProduct() ? premiumProduct()!.name : 'Sin datos' }}</strong>
+        <p>
+          {{ premiumProduct() ? (premiumProduct()!.price | currency:'USD') : 'Esperando catalogo para priorizar el producto de mayor valor.' }}
+        </p>
+      </article>
+
+      <article class="kpi-card panel-surface">
+        <p class="section-label">Arquitectura visual</p>
+        <strong>Minimalista y modular</strong>
+        <p>Cards, grids, sidebar, formularios y feedback comparten un mismo lenguaje visual.</p>
+      </article>
+    </section>
+
+    <section class="content-grid">
+      <section class="content-main">
+        <article class="content-panel panel-surface" id="acceso">
+          <div class="section-head section-head--split">
+            <div>
+              <p class="eyebrow">Formularios esteticos y usables</p>
+              <h2>Acceso claro, compacto y enfocado en productividad.</h2>
+            </div>
+
+            <div class="segment-control" aria-label="Modo de autenticacion">
+              <button
+                type="button"
+                class="segment-control__item"
+                [class.segment-control__item--active]="authMode() === 'login'"
+                (click)="setAuthMode('login')"
+              >
+                Ingresar
+              </button>
+              <button
+                type="button"
+                class="segment-control__item"
+                [class.segment-control__item--active]="authMode() === 'register'"
+                (click)="setAuthMode('register')"
+              >
+                Crear cuenta
+              </button>
+            </div>
+          </div>
+
+          @if (authError()) {
+            <p class="feedback feedback--error">{{ authError() }}</p>
+          }
+          @if (authSuccess()) {
+            <p class="feedback feedback--success">{{ authSuccess() }}</p>
+          }
+
+          @if (authMode() === 'login') {
+            <form [formGroup]="loginForm" (ngSubmit)="submitLogin()" class="form-grid">
+              <label class="field field--full">
+                <span>Correo corporativo</span>
+                <input type="email" formControlName="email" placeholder="cliente@empresa.com" />
+                @if (hasFieldError('login', 'email')) {
+                  <small class="field-error">Ingresa un correo valido.</small>
+                }
+              </label>
+
+              <label class="field field--full">
+                <span>Contrasena</span>
+                <input type="password" formControlName="password" placeholder="Minimo 8 caracteres" />
+                @if (hasFieldError('login', 'password')) {
+                  <small class="field-error">La contrasena debe tener al menos 8 caracteres.</small>
+                }
+              </label>
+
+              <button type="submit" class="button button--primary field--full" [disabled]="isSubmittingAuth()">
+                {{ isSubmittingAuth() ? 'Ingresando...' : 'Entrar a la plataforma' }}
+              </button>
+            </form>
+          } @else {
+            <form [formGroup]="registerForm" (ngSubmit)="submitRegister()" class="form-grid">
+              <label class="field field--full">
+                <span>Nombre completo</span>
+                <input type="text" formControlName="fullName" placeholder="Responsable de cuenta" />
+                @if (hasFieldError('register', 'fullName')) {
+                  <small class="field-error">Ingresa un nombre de al menos 3 caracteres.</small>
+                }
+              </label>
+
+              <label class="field">
+                <span>Correo</span>
+                <input type="email" formControlName="email" placeholder="cliente@empresa.com" />
+                @if (hasFieldError('register', 'email')) {
+                  <small class="field-error">Ingresa un correo valido.</small>
+                }
+              </label>
+
+              <label class="field">
+                <span>Contrasena</span>
+                <input type="password" formControlName="password" placeholder="Letras y numeros" />
+                @if (hasFieldError('register', 'password')) {
+                  <small class="field-error">Usa minimo 8 caracteres con letras y numeros.</small>
+                }
+              </label>
+
+              <button type="submit" class="button button--primary field--full" [disabled]="isSubmittingAuth()">
+                {{ isSubmittingAuth() ? 'Registrando...' : 'Crear cuenta y entrar' }}
+              </button>
+            </form>
+          }
+        </article>
+
+        <article class="content-panel panel-surface" id="catalogo">
+          <div class="section-head">
+            <div>
+              <p class="eyebrow">Paleta, cards y tablas visuales</p>
+              <h2>Catalogo con filtros limpios, tarjetas sobrias y lectura comercial rapida.</h2>
+            </div>
+            <button type="button" class="button button--secondary" (click)="loadProducts()">
+              Actualizar catalogo
+            </button>
+          </div>
+
+          <div class="toolbar-grid">
+            <label class="field">
+              <span>Buscar producto</span>
+              <input
+                type="text"
+                [value]="catalogQuery()"
+                (input)="setCatalogQuery(($any($event.target).value))"
+                placeholder="Nombre o descripcion"
+              />
+            </label>
+
+            <label class="field">
+              <span>Ordenar por</span>
+              <select [value]="catalogSort()" (change)="setCatalogSort($any($event.target).value)">
+                <option value="featured">Destacados</option>
+                <option value="price-desc">Precio alto</option>
+                <option value="price-asc">Precio bajo</option>
+                <option value="stock-desc">Mayor stock</option>
+              </select>
+            </label>
+          </div>
+
+          @if (productError()) {
+            <p class="feedback feedback--error">{{ productError() }}</p>
+          }
+          @if (productSuccess()) {
+            <p class="feedback feedback--success">{{ productSuccess() }}</p>
+          }
+
+          @if (isLoadingProducts()) {
+            <p class="feedback">Cargando productos...</p>
+          } @else if (!filteredProducts().length) {
+            <article class="empty-state">
+              <p class="eyebrow">Sin resultados</p>
+              <h3>No hay productos para el filtro actual.</h3>
+              <p>Ajusta la busqueda o agrega una referencia desde el modulo operativo.</p>
+            </article>
+          } @else {
+            <div class="catalog-grid">
+              @for (product of filteredProducts(); track product.id) {
+                <article class="product-card">
+                  <div class="product-card__header">
+                    <div>
+                      <p class="section-label">Producto</p>
+                      <h3>{{ product.name }}</h3>
+                    </div>
+                    <strong>{{ product.price | currency:'USD' }}</strong>
+                  </div>
+
+                  <p class="product-card__description">{{ product.description }}</p>
+
+                  <div class="product-card__footer">
+                    <span>Stock {{ product.availableStock }}</span>
+                    <span [class.product-card__footer--warning]="product.availableStock <= 5">
+                      {{ product.availableStock <= 5 ? 'Reposicion sugerida' : 'Cobertura estable' }}
+                    </span>
+                  </div>
+                </article>
+              }
+            </div>
+          }
+        </article>
+
+        <article class="content-panel panel-surface" id="operacion">
+          <div class="section-head">
+            <div>
+              <p class="eyebrow">Diseno de componentes</p>
+              <h2>Operacion unificada para productos y pedidos sin romper el flujo actual.</h2>
+            </div>
+          </div>
+
+          <div class="operations-grid">
+            <section class="operation-card">
+              <div class="section-head section-head--compact">
+                <div>
+                  <p class="section-label">Nuevo producto</p>
+                  <h3>Agregar referencia</h3>
+                </div>
+              </div>
+
+              <form [formGroup]="productForm" (ngSubmit)="submitProduct()" class="form-grid">
+                <label class="field">
+                  <span>Nombre</span>
+                  <input type="text" formControlName="name" placeholder="Aurora Marble Desk" />
+                  @if (hasFieldError('product', 'name')) {
+                    <small class="field-error">El nombre debe tener al menos 3 caracteres.</small>
+                  }
+                </label>
+
+                <label class="field">
+                  <span>Precio</span>
+                  <input type="number" formControlName="price" min="0.01" step="0.01" />
+                  @if (hasFieldError('product', 'price')) {
+                    <small class="field-error">El precio debe ser mayor que cero.</small>
+                  }
+                </label>
+
+                <label class="field field--full">
+                  <span>Descripcion</span>
+                  <textarea formControlName="description" rows="4" placeholder="Descripcion comercial premium."></textarea>
+                  @if (hasFieldError('product', 'description')) {
+                    <small class="field-error">La descripcion debe tener al menos 10 caracteres.</small>
+                  }
+                </label>
+
+                <label class="field">
+                  <span>Stock inicial</span>
+                  <input type="number" formControlName="availableStock" min="1" />
+                  @if (hasFieldError('product', 'availableStock')) {
+                    <small class="field-error">El stock minimo es 1.</small>
+                  }
+                </label>
+
+                <button type="submit" class="button button--secondary field--full" [disabled]="isSubmittingProduct()">
+                  {{ isSubmittingProduct() ? 'Guardando...' : 'Guardar producto' }}
+                </button>
+              </form>
+            </section>
+
+            <section class="operation-card operation-card--accent">
+              <div class="section-head section-head--compact">
+                <div>
+                  <p class="section-label">Nuevo pedido</p>
+                  <h3>Crear orden de compra</h3>
+                </div>
+                <button type="button" class="button button--ghost" (click)="loadOrders()">
+                  Actualizar pedidos
+                </button>
+              </div>
+
+              @if (orderError()) {
+                <p class="feedback feedback--error">{{ orderError() }}</p>
+              }
+              @if (orderSuccess()) {
+                <p class="feedback feedback--success">{{ orderSuccess() }}</p>
+              }
+
+              <form [formGroup]="orderForm" (ngSubmit)="submitOrder()" class="form-grid">
+                <label class="field field--full">
+                  <span>Producto</span>
+                  <select formControlName="productId">
+                    @for (product of products(); track product.id) {
+                      <option [value]="product.id">
+                        {{ product.name }} - {{ product.price | currency:'USD' }}
+                      </option>
+                    }
+                  </select>
+                  @if (hasFieldError('order', 'productId')) {
+                    <small class="field-error">Selecciona un producto.</small>
+                  }
+                </label>
+
+                <label class="field">
+                  <span>Cantidad</span>
+                  <input type="number" formControlName="quantity" min="1" />
+                  @if (hasFieldError('order', 'quantity')) {
+                    <small class="field-error">La cantidad minima es 1.</small>
+                  }
+                </label>
+
+                <label class="field">
+                  <span>Comprador</span>
+                  <input type="text" formControlName="customerName" placeholder="Nombre del comprador" />
+                </label>
+
+                <article class="selection-card field--full">
+                  <span>Resumen de pedido</span>
+                  @if (selectedProduct(); as selected) {
+                    <strong>{{ selected.name }}</strong>
+                    <p>{{ selected.price | currency:'USD' }} por unidad</p>
+                    <small>Total estimado {{ orderPreviewTotal() | currency:'USD' }}</small>
+                  } @else {
+                    <strong>Sin seleccion</strong>
+                    <p>Elige una referencia para calcular el pedido.</p>
+                  }
+                </article>
+
+                <button type="submit" class="button button--primary field--full" [disabled]="isSubmittingOrder()">
+                  {{ isSubmittingOrder() ? 'Procesando pedido...' : 'Registrar pedido' }}
+                </button>
+              </form>
+            </section>
+          </div>
+        </article>
+      </section>
+
+      <aside class="content-aside">
+        <article class="side-panel panel-surface">
+          <p class="eyebrow">Responsive y consistencia</p>
+          <h3>Guia visual reusable</h3>
+          <div class="mini-list">
+            <article>
+              <span>Color</span>
+              <strong>Azules corporativos, neutrales frios y acentos medidos.</strong>
+            </article>
+            <article>
+              <span>Tipografia</span>
+              <strong>Sora para jerarquia y Plus Jakarta Sans para lectura continua.</strong>
+            </article>
+            <article>
+              <span>Espaciado</span>
+              <strong>Sistema de 4, 8, 12, 16, 24 y 32 px para escalar modulos.</strong>
+            </article>
+          </div>
+        </article>
+
+        <article class="side-panel panel-surface" id="actividad">
+          <div class="section-head section-head--compact">
+            <div>
+              <p class="eyebrow">Actividad reciente</p>
+              <h3>Pedidos</h3>
+            </div>
+          </div>
+
+          @if (isLoadingOrders()) {
+            <p class="feedback">Cargando pedidos...</p>
+          } @else if (!recentOrders().length) {
+            <article class="empty-state empty-state--compact">
+              <h3>Sin actividad</h3>
+              <p>Registra una orden para poblar esta vista.</p>
+            </article>
+          } @else {
+            <div class="timeline-list">
+              @for (order of recentOrders(); track order.id) {
+                <article class="timeline-card">
+                  <div class="timeline-card__header">
+                    <h4>{{ order.productName }}</h4>
+                    <strong>{{ order.totalPrice | currency:'USD' }}</strong>
+                  </div>
+                  <p>{{ order.customerName || 'Cliente general' }}</p>
+                  <div class="timeline-card__meta">
+                    <span>{{ order.quantity }} unidad(es)</span>
+                    <span>{{ order.status }}</span>
+                    <span>{{ order.createdAt | date:'medium' }}</span>
+                  </div>
+                </article>
+              }
+            </div>
+          }
+        </article>
+
+        <article class="side-panel panel-surface" id="arquitectura">
+          <div class="section-head section-head--compact">
+            <div>
+              <p class="eyebrow">Estilo empresarial moderno</p>
+              <h3>Base visual escalable</h3>
+            </div>
+          </div>
+
+          <div class="architecture-list">
+            @for (point of architecturePoints; track point) {
+              <article class="architecture-item">
+                <span></span>
+                <p>{{ point }}</p>
+              </article>
+            }
+          </div>
+        </article>
+      </aside>
+    </section>
+  </section>
+</main>

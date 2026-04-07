@@ -1,0 +1,138 @@
+services:
+  auth-db:
+    image: postgres:16-alpine
+    container_name: auth-db
+    environment:
+      POSTGRES_DB: auth_db
+      POSTGRES_USER: auth_user
+      POSTGRES_PASSWORD: auth_pass
+    ports:
+      - "5435:5432"
+    volumes:
+      - auth_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U auth_user -d auth_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  products-db:
+    image: postgres:16-alpine
+    container_name: products-db
+    environment:
+      POSTGRES_DB: products_db
+      POSTGRES_USER: products_user
+      POSTGRES_PASSWORD: products_pass
+    ports:
+      - "5433:5432"
+    volumes:
+      - products_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U products_user -d products_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  orders-db:
+    image: postgres:16-alpine
+    container_name: orders-db
+    environment:
+      POSTGRES_DB: orders_db
+      POSTGRES_USER: orders_user
+      POSTGRES_PASSWORD: orders_pass
+    ports:
+      - "5434:5432"
+    volumes:
+      - orders_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U orders_user -d orders_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  auth-service:
+    build:
+      context: .
+      dockerfile: backend/auth-service/Dockerfile
+    environment:
+      DB_HOST: auth-db
+      DB_PORT: 5432
+      DB_NAME: auth_db
+      DB_USER: auth_user
+      DB_PASSWORD: auth_pass
+    depends_on:
+      auth-db:
+        condition: service_healthy
+    ports:
+      - "8083:8083"
+
+  product-service:
+    build:
+      context: .
+      dockerfile: backend/product-service/Dockerfile
+    environment:
+      DB_HOST: products-db
+      DB_PORT: 5432
+      DB_NAME: products_db
+      DB_USER: products_user
+      DB_PASSWORD: products_pass
+    depends_on:
+      products-db:
+        condition: service_healthy
+    ports:
+      - "8081:8081"
+
+  order-service:
+    build:
+      context: .
+      dockerfile: backend/order-service/Dockerfile
+    environment:
+      DB_HOST: orders-db
+      DB_PORT: 5432
+      DB_NAME: orders_db
+      DB_USER: orders_user
+      DB_PASSWORD: orders_pass
+      PRODUCT_SERVICE_URL: http://product-service:8081
+    depends_on:
+      orders-db:
+        condition: service_healthy
+      product-service:
+        condition: service_started
+    ports:
+      - "8082:8082"
+
+  api-gateway:
+    build:
+      context: .
+      dockerfile: backend/api-gateway/Dockerfile
+    environment:
+      AUTH_SERVICE_URL: http://auth-service:8083
+      PRODUCT_SERVICE_URL: http://product-service:8081
+      ORDER_SERVICE_URL: http://order-service:8082
+      ALLOWED_ORIGINS: http://localhost:4200,http://localhost:8080
+    depends_on:
+      auth-service:
+        condition: service_started
+      product-service:
+        condition: service_started
+      order-service:
+        condition: service_started
+    ports:
+      - "8080:8080"
+
+  frontend:
+    build:
+      context: .
+      dockerfile: frontend-app/Dockerfile
+    environment:
+      API_URL: http://localhost:8080/api
+    depends_on:
+      api-gateway:
+        condition: service_started
+    ports:
+      - "4200:80"
+
+volumes:
+  auth_data:
+  products_data:
+  orders_data:
